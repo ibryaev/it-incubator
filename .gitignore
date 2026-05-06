@@ -1,4 +1,35 @@
+# Node.js & Next.js (Фронтенд)
+node_modules/
+.next/
+out/
+build/
+dist/
+.vercel/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Python (Бэкенд)
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# ОС и Среда разработки
+.DS_Store
+Thumbs.db
 .vscode/
-*pycache*/
+.idea/
+
+# Секретные ключи
 .env
-.venv
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
