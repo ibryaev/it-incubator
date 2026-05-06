@@ -2,3 +2,4 @@ psycopg
 aiogram
 aiohttp
 aiohttp-socks
+python-dotenv
