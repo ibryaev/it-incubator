@@ -1,0 +1,4 @@
+psycopg
+aiogram
+aiohttp
+aiohttp-socks
