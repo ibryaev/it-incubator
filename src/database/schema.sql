@@ -18,21 +18,21 @@ CREATE TABLE IF NOT EXISTS users (
     first_name VARCHAR(64) NOT NULL,
     last_name VARCHAR(64) DEFAULT NULL,
     bio VARCHAR(384) DEFAULT NULL,
-    "role" user_role_type NOT NULL,
+    "role" user_role_type NOT NULL DEFAULT 'customer',
     spec user_spec_type[] DEFAULT NULL,
-    orders_created INTEGER[] DEFAULT {},
-    orders_pinned INTEGER[] DEFAULT {},    
+    orders_created INTEGER[] DEFAULT '{}',
+    orders_pinned INTEGER[] DEFAULT '{}',
     date_reg TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS orders (
     id SERIAL PRIMARY KEY,
     title VARCHAR(192) NOT NULL,
-    bio TEXT NOT NULL,
+    techspec TEXT NOT NULL,
     "status" order_status_type NOT NULL DEFAULT 'created',
-    customer_id INTEGER NOT NULL,
-    manager_id INTEGER DEFAULT NULL,
-    students_pinned INTEGER[] DEFAULT {},
+    customer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    manager_id INTEGER DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
+    students_pinned INTEGER[] DEFAULT '{}',
     date_reg TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
