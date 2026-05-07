@@ -13,27 +13,27 @@ DO $$ BEGIN
 END $$;
 
 
-CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    first_name VARCHAR(64) NOT NULL,
-    last_name VARCHAR(64) DEFAULT NULL,
-    bio VARCHAR(384) DEFAULT NULL,
-    "role" user_role_type NOT NULL DEFAULT 'customer',
-    spec user_spec_type[] DEFAULT NULL,
-    orders_created INTEGER[] DEFAULT '{}',
-    orders_pinned INTEGER[] DEFAULT '{}',
-    date_reg TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS users (                      -- Таблица с учётными записями
+    id SERIAL PRIMARY KEY,                              -- Уникальный ID (user_id, uid). Просто SERIAL
+    first_name VARCHAR(64) NOT NULL,                    -- Имя пользователя. ОБЯЗАТЕЛЬНАЯ КОЛОНКА
+    last_name VARCHAR(64) DEFAULT NULL,                 -- Фамилия
+    bio VARCHAR(384) DEFAULT NULL,                      -- Краткое описание человека
+    "role" user_role_type NOT NULL DEFAULT 'customer',  -- Роль человека в системе: заказчик, студент (исполнитель), преподаватель (менеджер), админ
+    spec user_spec_type[] DEFAULT NULL,                 -- Спецификация человека, как и требовалось в ТЗ
+    orders_created INTEGER[] DEFAULT '{}',              -- Массив orders(id), созданных этим человеком
+    orders_pinned INTEGER[] DEFAULT '{}',               -- Массив orders(id), прикреплённые за этим человеком
+    date_reg TIMESTAMPTZ NOT NULL DEFAULT NOW()         -- Дата регистрации в виде UNIX timestamp
 );
 
-CREATE TABLE IF NOT EXISTS orders (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(192) NOT NULL,
-    techspec TEXT NOT NULL,
-    "status" order_status_type NOT NULL DEFAULT 'created',
-    customer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    manager_id INTEGER DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
-    students_pinned INTEGER[] DEFAULT '{}',
-    date_reg TIMESTAMPTZ NOT NULL DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS orders (                                             -- Таблица с заказами
+    id SERIAL PRIMARY KEY,                                                      -- Уникальный ID (order_id, oid). Просто SERIAL
+    title VARCHAR(192) NOT NULL,                                                -- Название проекта. ОБЯЗАТЕЛЬНАЯ КОЛОНКА
+    techspec TEXT NOT NULL,                                                     -- Описание (техническое задание). ОБЯЗАТЕЛЬНАЯ КОЛОНКА
+    "status" order_status_type NOT NULL DEFAULT 'created',                      -- Статус заказа: создан, взят в работу, тестируется, готов, отменён
+    customer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,        -- users(id) пользователя, который создал заказ. ОБЯЗАТЕЛЬНАЯ КОЛОНКА
+    manager_id INTEGER DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,    -- users(id) менеджера, который взял заказ
+    students_pinned INTEGER[] DEFAULT '{}',                                     -- Массив всех users(id), которые закреплены за этим проектом как исполнители
+    date_reg TIMESTAMPTZ NOT NULL DEFAULT NOW()                                 -- Дата создания в виде UNIX timestamp
 );
 
 CREATE INDEX IF NOT EXISTS idx_orders_customer_id ON orders(customer_id);
