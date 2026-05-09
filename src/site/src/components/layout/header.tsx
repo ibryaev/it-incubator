@@ -167,7 +167,6 @@ export const Header = () => {
 
   const navItems =[
     { name: "О нас", path: "/about" },
-    { name: "IT Инкубатор", path: "/" },
     { name: "Команда", path: "/team" },
     { name: "Контакты", path: "/contacts" },
   ];
@@ -200,7 +199,7 @@ export const Header = () => {
       <div className="pointer-events-auto h-[56px] shrink-0">
         <LiquidPill className="px-6 flex items-center justify-center">
           <Link href="/" className="flex items-center h-full">
-            <Image src="/logo.png" alt="Lol Tech" width={110} height={30} className="object-contain" />
+            <Image src="/logo.png" alt="Lol Tech" width={140} height={40} className="object-contain" />
           </Link>
         </LiquidPill>
       </div>
