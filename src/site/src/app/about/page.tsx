@@ -8,7 +8,6 @@ export default function Home() {
   return (
     <main className="relative min-h-screen text-white overflow-hidden selection:bg-blue-500/30">
       <GlowingBackground />
-      <Header />
       
       {/* Секция "О нас" */}
       <section className="pt-32 pb-20 px-6 max-w-7xl mx-auto flex flex-col items-center">

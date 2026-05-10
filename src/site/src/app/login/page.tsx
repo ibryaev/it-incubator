@@ -5,7 +5,6 @@ export default function Home() {
   return (
     <main className="relative min-h-screen">
       <GlowingBackground />
-      <Header />
       
       {/* Временный контент для теста */}
       <div className="flex flex-col items-center justify-center min-h-screen pt-20">

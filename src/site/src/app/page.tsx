@@ -9,7 +9,6 @@ export default function Home() {
   return (
     <main className="relative min-h-screen text-white overflow-hidden selection:bg-blue-500/30">
       <GlowingBackground />
-      <Header />
       
       {/* 1. HERO СЕКЦИЯ */}
       <section className="relative pt-40 pb-20 px-6 flex flex-col items-center text-center max-w-4xl mx-auto mt-10">

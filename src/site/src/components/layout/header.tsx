@@ -3,8 +3,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, LogIn } from "lucide-react";
+import { motion, AnimatePresence, useAnimate } from "framer-motion";
+import { ChevronDown } from "lucide-react";
 
 // --- Секретный ингредиент матового стекла: микро-текстура (SVG-шум) ---
 const MATTE_NOISE = "data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E";
@@ -27,13 +27,12 @@ const LiquidPill = ({ children, className = "" }: { children: React.ReactNode, c
       const w = pillRef.current.offsetWidth;
       const h = pillRef.current.offsetHeight;
       
-      // ИСПРАВЛЕНИЕ "ДЫР": Радиус никогда не будет больше, чем элемент может себе позволить
       const radius = Math.min(28, w / 2, h / 2);
-      const bezelW = Math.max(1, Math.min(25, radius - 1)); 
-      const glassThick = 25; 
-      const ior = 1.5; 
-      const scaleMult = 3.0; 
-      const blurAmt = 6; 
+      const bezelW = Math.max(1, Math.min(25, radius - 1));
+      const glassThick = 25;
+      const ior = 1.5;
+      const scaleMult = 3.0;
+      const blurAmt = 6;
       
       const heightFn = (x: number) => Math.pow(1 - Math.pow(1 - x, 4), 0.25);
       const profile = new Float64Array(128);
@@ -124,11 +123,7 @@ const LiquidPill = ({ children, className = "" }: { children: React.ReactNode, c
       )}
       <div 
         ref={pillRef}
-        className={`
-          relative rounded-[28px] border border-white/[0.04] overflow-hidden
-          transition-all duration-300 w-full
-          ${className}
-        `}
+        className={`relative rounded-[28px] border border-white/[0.04] overflow-hidden transition-all duration-300 w-full ${className}`}
         style={
           isChromium
             ? {
@@ -160,10 +155,13 @@ export const Header = () => {
   const pathname = usePathname() || "/";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Стейты для ползунков (ширина и отступ слева) вместо layoutId
   const navRef = useRef<HTMLElement>(null);
-  const [activeStyle, setActiveStyle] = useState({ left: 0, width: 0, opacity: 0 });
-  const [hoverStyle, setHoverStyle] = useState({ left: 0, width: 0, opacity: 0 });
+  
+  const [activeScope, animateActive] = useAnimate();
+  const isFirstRender = useRef(true);
+
+  const[hoverStyle, setHoverStyle] = useState<{ left: number; width: number } | null>(null);
+  const[isHovered, setIsHovered] = useState(false);
 
   const navItems =[
     { name: "О нас", path: "/about" },
@@ -171,31 +169,59 @@ export const Header = () => {
     { name: "Контакты", path: "/contacts" },
   ];
 
-  const currentTab = navItems.find(item => item.path === pathname) || navItems[0];
+  // Если мы на главной странице (или другой, которой нет в списке), пишем "Меню" в мобилке
+  const currentTab = navItems.find((item) => item.path === pathname) || { name: "Меню", path: "/" };
 
-  // Пересчитываем позицию активного ползунка при смене страницы или ресайзе
   useEffect(() => {
-    const updateActiveTab = () => {
-      if (!navRef.current) return;
+    if (!navRef.current || !activeScope.current) return;
+
+    const activeEl = navRef.current.querySelector('[data-active="true"]') as HTMLElement;
+    
+    // === НОВАЯ ЛОГИКА ===
+    // Если активной вкладки нет (например, перешли на главную), плавно скрываем ползунок
+    if (!activeEl) {
+      animateActive(activeScope.current, { opacity: 0 }, { duration: 0.3 });
+      return;
+    }
+
+    if (isFirstRender.current) {
+      // При первой загрузке страницы (сразу на нужной вкладке) ставим ползунок на место мгновенно
+      animateActive(activeScope.current, {
+        left: activeEl.offsetLeft,
+        width: activeEl.offsetWidth,
+        opacity: 1,
+      }, { duration: 0 });
+      isFirstRender.current = false;
+    } else {
+      // При клике по ссылке анимируем плавно. 
+      // Если возвращаемся с главной страницы, он плавно появится (opacity 1) и доедет куда надо
+      animateActive(activeScope.current, {
+        left: activeEl.offsetLeft,
+        width: activeEl.offsetWidth,
+        opacity: 1,
+      }, { type: "spring", stiffness: 400, damping: 30 });
+    }
+  },[pathname, animateActive]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (!navRef.current || !activeScope.current) return;
       const activeEl = navRef.current.querySelector('[data-active="true"]') as HTMLElement;
       if (activeEl) {
-        setActiveStyle({
+        animateActive(activeScope.current, {
           left: activeEl.offsetLeft,
           width: activeEl.offsetWidth,
-          opacity: 1,
-        });
+        }, { duration: 0 });
       }
     };
-
-    updateActiveTab();
-    window.addEventListener("resize", updateActiveTab);
-    return () => window.removeEventListener("resize", updateActiveTab);
-  }, [pathname]);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [animateActive]);
 
   return (
     <header className="fixed top-6 left-0 right-0 z-50 pointer-events-none px-4 md:px-8 flex justify-between items-start gap-2 md:gap-4 max-w-[1400px] mx-auto">
       
-      {/* --- ЛЕВАЯ КАПСУЛА: Логотип --- */}
+      {/* --- ЛЕВАЯ КАПСУЛА --- */}
       <div className="pointer-events-auto h-[56px] shrink-0">
         <LiquidPill className="px-6 flex items-center justify-center">
           <Link href="/" className="flex items-center h-full">
@@ -204,30 +230,34 @@ export const Header = () => {
         </LiquidPill>
       </div>
 
-      {/* --- ЦЕНТРАЛЬНАЯ КАПСУЛА: Вкладки --- */}
+      {/* --- ЦЕНТРАЛЬНАЯ КАПСУЛА --- */}
       <div className="pointer-events-auto flex-1 max-w-fit">
         <LiquidPill className="p-1.5 flex flex-col justify-center min-w-[200px] md:min-w-fit min-h-[56px]">
           
           <nav 
-            ref={navRef} 
+            ref={navRef}
             className="hidden md:flex items-center h-full relative" 
-            onMouseLeave={() => setHoverStyle(prev => ({ ...prev, opacity: 0 }))}
+            onMouseLeave={() => setIsHovered(false)}
           >
-            {/* Ползунок активной вкладки (Движется по left/width) */}
+            {/* АКТИВНЫЙ ПОЛЗУНОК */}
             <motion.div
+              ref={activeScope}
               className="absolute top-0 bottom-0 bg-white/[0.08] rounded-full z-[-1]"
-              animate={activeStyle}
-              initial={false}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              initial={{ opacity: 0 }}
             />
-            
-            {/* Ползунок при наведении */}
-            <motion.div
-              className="absolute top-0 bottom-0 bg-white/[0.03] rounded-full z-[-2]"
-              animate={hoverStyle}
-              initial={false}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            />
+
+            {/* ПОЛЗУНОК ПРИ НАВЕДЕНИИ */}
+            <AnimatePresence>
+              {isHovered && hoverStyle && (
+                <motion.div
+                  className="absolute top-0 bottom-0 bg-white/[0.03] rounded-full z-[-2]"
+                  initial={{ opacity: 0 }}
+                  animate={{ left: hoverStyle.left, width: hoverStyle.width, opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
+            </AnimatePresence>
 
             {navItems.map((item) => {
               const isActive = item.path === pathname;
@@ -240,8 +270,8 @@ export const Header = () => {
                     setHoverStyle({
                       left: e.currentTarget.offsetLeft,
                       width: e.currentTarget.offsetWidth,
-                      opacity: 1,
                     });
+                    setIsHovered(true);
                   }}
                   className={`
                     relative px-6 h-full flex items-center justify-center text-[13px] font-semibold tracking-wider transition-colors duration-300 z-10 uppercase
@@ -295,7 +325,7 @@ export const Header = () => {
         </LiquidPill>
       </div>
 
-      {/* --- ПРАВАЯ КАПСУЛА: Войти --- */}
+      {/* --- ПРАВАЯ КАПСУЛА --- */}
       <div className="pointer-events-auto h-[56px] shrink-0">
         <LiquidPill className="px-2 flex items-center justify-center group cursor-pointer hover:bg-white/[0.02]">
           <Link href="/login" className="flex items-center justify-center gap-2 px-4 h-full">
