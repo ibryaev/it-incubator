@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
-// Конфигурация анимаций
+// Используем те же константы анимации для консистентности
 const fadeInUp = {
   hidden: { opacity: 0, y: 20 },
   visible: {
@@ -21,13 +21,13 @@ const staggerContainer = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
+      staggerChildren: 0.08, // Чуть быстрее, так как полей больше
       delayChildren: 0.1
     }
   }
 };
 
-export default function LoginPage() {
+export default function RegisterPage() {
   return (
     <main className="relative min-h-screen text-white overflow-hidden flex flex-col">
       <GlowingBackground />
@@ -37,43 +37,45 @@ export default function LoginPage() {
           initial="hidden"
           animate="visible"
           variants={staggerContainer}
-          className="w-full max-w-md space-y-12 relative z-10"
+          className="w-full max-w-md space-y-10 relative z-10"
         >
           {/* Заголовок */}
           <motion.h1 
             variants={fadeInUp}
-            className="text-6xl md:text-7xl font-medium tracking-tight text-center"
+            className="text-5xl md:text-6xl font-medium tracking-tight text-center"
           >
-            Вход
+            Регистрация
           </motion.h1>
 
-          {/* Инпуты */}
+          {/* Список инпутов - каждый появится по очереди */}
           <motion.div variants={fadeInUp} className="space-y-4">
+            <GlassInput type="email" placeholder="почта" />
             <GlassInput type="text" placeholder="имя" />
             <GlassInput type="password" placeholder="пароль" />
+            <GlassInput type="password" placeholder="повторите пароль" />
           </motion.div>
 
-          {/* Кнопки действий */}
+          {/* Действия */}
           <motion.div 
             variants={fadeInUp}
             className="flex items-center justify-between gap-4"
           >
             <Link 
-              href="/register" 
+              href="/login" 
               className="text-sm text-gray-400 hover:text-white transition-colors border-b border-gray-400/30 hover:border-white"
             >
-              Зарегистрироваться
+              Войти
             </Link>
             
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <LiquidButton className="px-10">
-                ВОЙТИ
+              <LiquidButton className="px-6 py-3 text-[11px] uppercase tracking-wider">
+                Зарегистрироваться
               </LiquidButton>
             </motion.div>
           </motion.div>
 
           {/* Ссылка назад */}
-          <motion.div variants={fadeInUp} className="flex justify-center pt-8">
+          <motion.div variants={fadeInUp} className="flex justify-center pt-4">
             <Link 
               href="/" 
               className="group flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
