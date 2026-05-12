@@ -264,18 +264,15 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Кнопка ~75% от верха (≈ середина между центром и низом) */}
+        {/* Кнопка ~80% от верха (≈ середина между центром и низом) */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           className="absolute left-1/2 -translate-x-1/2"
           style={{ top: "80%", zIndex: 5 }}
         >
           <Link href="/contacts">
-            <LiquidButton className="px-10 py-4">
+            <LiquidButton className="mt-4 px-10 py-4">
               Обсудить проект
             </LiquidButton>
           </Link>
