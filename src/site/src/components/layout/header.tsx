@@ -223,9 +223,9 @@ export const Header = () => {
       
       {/* --- ЛЕВАЯ КАПСУЛА --- */}
       <div className="pointer-events-auto h-[56px] shrink-0">
-        <LiquidPill className="px-6 flex items-center justify-center">
+        <LiquidPill className="px-0 flex items-center justify-center">
           <Link href="/" className="flex items-center h-full">
-            <Image src="/logo.png" alt="Lol Tech" width={140} height={40} className="object-contain" />
+            <Image src="/logo.png" alt="Lol Tech" width={120} height={40} className="object-contain" />
           </Link>
         </LiquidPill>
       </div>
@@ -327,7 +327,7 @@ export const Header = () => {
 
       {/* --- ПРАВАЯ КАПСУЛА --- */}
       <div className="pointer-events-auto h-[56px] shrink-0">
-        <LiquidPill className="px-2 flex items-center justify-center group cursor-pointer hover:bg-white/[0.02]">
+        <LiquidPill className="px-4 flex items-center justify-center group cursor-pointer hover:bg-white/[0.02]">
           <Link href="/login" className="flex items-center justify-center gap-2 px-4 h-full">
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-pulse block"></span>
             <span className="uppercase text-[13px] font-semibold text-gray-200 group-hover:text-white transition-colors">
