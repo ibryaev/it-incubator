@@ -5,6 +5,13 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { LiquidButton } from "@/components/ui/liquid-button";
 import { DashboardIllustration } from "@/components/ui/dashboard-illustration";
+import dynamic from "next/dynamic";
+
+// Динамически подгружаем 3D-компонент, полностью отключая серверный рендеринг (SSR)
+const SilverRubiksCube = dynamic(
+  () => import("@/components/ui/silver-rubiks-cube").then((mod) => mod.SilverRubiksCube),
+  { ssr: false }
+);
 
 // ─── Анимации ─────────────────────────────────────────────────────────────────
 const fadeInUp = {
@@ -216,31 +223,45 @@ export default function Home() {
         className="relative w-full"
         style={{ height: "100dvh", zIndex: 1 }}
       >
-        {/* Расходящиеся круги */}
+        {/* Расходящиеся круги (На самом дне) */}
         <RippleCircles />
 
-        {/* Заголовок + описание — строго по центру */}
+        {/* Заголовок + кубик + описание */}
         <motion.div
           initial="hidden"
           animate="visible"
           variants={staggerContainer}
-          className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center"
+          // Делаем pointer-events-none для обертки, чтобы можно было кликать на фон 
+          // (но внутри включим pointer-events-auto)
+          className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center pointer-events-none"
           style={{ zIndex: 2 }}
         >
-          <motion.h1
-            variants={fadeInUp}
-            className="text-5xl md:text-7xl font-medium tracking-tight text-white mb-6"
-          >
-            IT-инкубатор
-          </motion.h1>
+          {/* Контейнер для контента центрирован по вертикали и горизонтали */}
+          <div className="pointer-events-auto flex flex-col items-center justify-center -mt-2">
+            
+            {/* 1. ЗАГОЛОВОК */}
+            <motion.h1
+              variants={fadeInUp}
+              className="text-5xl md:text-7xl font-medium tracking-tight text-white drop-shadow-1xl"
+            >
+              IT-инкубатор
+            </motion.h1>
 
-          <motion.p
-            variants={fadeInUp}
-            className="text-gray-400 text-base md:text-lg leading-relaxed max-w-2xl"
-          >
-            Разрабатываем сайты, веб-приложения и ботов для ваших задач. Свежий взгляд,
-            современные технологии и контроль качества под руководством опытных наставников.
-          </motion.p>
+            {/* 2. 3D КУБИК МЕЖДУ ТЕКСТОМ (Опускаем его ниже) */}
+            {/* Добавляем больший отступ сверху (mt-6/mt-8) и отрицательный снизу, если нужно приблизить текст */}
+            <motion.div variants={fadeInUp} className="mt-8 mb-4 md:mt-12 md:mb-6">
+              <SilverRubiksCube />
+            </motion.div>
+
+            {/* 3. ОПИСАНИЕ */}
+            <motion.p
+              variants={fadeInUp}
+              className="text-gray-300 text-base md:text-lg leading-relaxed max-w-2xl drop-shadow-md mx-auto"
+            >
+              Разрабатываем сайты, веб-приложения и ботов для ваших задач. Свежий взгляд,
+              современные технологии и контроль качества под руководством опытных наставников.
+            </motion.p>
+          </div>
         </motion.div>
 
         {/* Кнопка ~75% от верха (≈ середина между центром и низом) */}
@@ -251,7 +272,7 @@ export default function Home() {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           className="absolute left-1/2 -translate-x-1/2"
-          style={{ top: "73%", zIndex: 5 }}
+          style={{ top: "80%", zIndex: 5 }}
         >
           <Link href="/contacts">
             <LiquidButton className="px-10 py-4">
