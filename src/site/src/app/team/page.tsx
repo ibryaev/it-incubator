@@ -1,7 +1,6 @@
 "use client";
-import { Header } from "@/components/layout/header";
 import { GlowingBackground } from "@/components/ui/glowing-bg";
-import { motion } from "framer-motion";
+import { motion, Variants} from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -43,21 +42,24 @@ const teamMembers =[
 ];
 
 // --- Конфигурация анимаций ---
-const fadeInUp = {
+const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 40 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.7, ease: "easeOut" }
+    transition: { 
+      duration: 0.7, 
+      ease: "easeOut" as const
+    }
   }
 };
 
-const staggerContainer = {
+const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.2, // Задержка между появлением карточек (чуть больше, чем у текста)
+      staggerChildren: 0.2,
       delayChildren: 0.1
     }
   }

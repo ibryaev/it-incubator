@@ -2,9 +2,8 @@
 
 import { GlowingBackground } from "@/components/ui/glowing-bg";
 import { LiquidButton } from "@/components/ui/liquid-button";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants} from "framer-motion";
 import { User } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -57,14 +56,26 @@ const projectsData =[
 ];
 
 // --- АНИМАЦИИ ---
-const fadeInUp = {
+const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { 
+      duration: 0.6, 
+      ease: "easeOut" as const
+    }
+  }
 };
 
 const staggerContainer = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.15 } },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.15,
+    }
+  }
 };
 
 export default function DashboardPage() {

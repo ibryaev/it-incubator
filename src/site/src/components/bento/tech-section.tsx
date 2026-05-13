@@ -1,5 +1,5 @@
 "use client";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
@@ -7,12 +7,15 @@ import { ArrowRight } from "lucide-react";
 // --- КОНФИГУРАЦИИ АНИМАЦИЙ ---
 
 // Плавный выезд текста
-const fadeInUp = {
+const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 30 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.6, ease: "easeOut" }
+    transition: { 
+      duration: 0.6, 
+      ease: "easeOut" as const
+    }
   }
 };
 
@@ -35,7 +38,10 @@ const platformPop = {
     opacity: 1,
     scale: 1,
     y: 0,
-    transition: { duration: 0.6, ease: "easeOut" }
+    transition: { 
+      duration: 0.6, 
+      ease: "easeOut" as const
+    }
   }
 };
 

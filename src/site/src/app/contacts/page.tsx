@@ -4,15 +4,18 @@ import { GlowingBackground } from "@/components/ui/glowing-bg";
 import { LiquidButton } from "@/components/ui/liquid-button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 
 // --- Конфигурация анимаций ---
-const fadeInUp = {
+const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 30 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.6, ease: "easeOut" }
+    transition: { 
+      duration: 0.6, 
+      ease: "easeOut" as const
+    }
   }
 };
 

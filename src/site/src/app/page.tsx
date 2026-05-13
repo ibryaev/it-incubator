@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, Variants, useScroll, useTransform } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { LiquidButton } from "@/components/ui/liquid-button";
@@ -14,16 +14,19 @@ const SilverRubiksCube = dynamic(
 );
 
 // ─── Анимации ─────────────────────────────────────────────────────────────────
-const fadeInUp = {
+const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 30 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] }
+    transition: { 
+      duration: 0.6, 
+      ease: [0.22, 1, 0.36, 1] // Теперь TS поймет, что это валидный ease
+    }
   }
 };
 
-const staggerContainer = {
+const staggerContainer: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -31,13 +34,16 @@ const staggerContainer = {
   }
 };
 
-const imageReveal = {
+const imageReveal: Variants = {
   hidden: { opacity: 0, scale: 0.9, y: 20 },
   visible: {
     opacity: 1,
     scale: 1,
     y: 0,
-    transition: { duration: 0.8, ease: "easeOut" }
+    transition: { 
+      duration: 0.8, 
+      ease: "easeOut" as const // Добавляем as const здесь
+    }
   }
 };
 

@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 IT-инкубатор — Modern Landing Page
 
-## Getting Started
+![Next.js](https://img.shields.io/badge/NEXT.JS-000000?style=for-the-badge&logo=next.js&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/TAILWIND_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TYPESCRIPT-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Framer Motion](https://img.shields.io/badge/FRAMER_MOTION-0055FF?style=for-the-badge&logo=framer&logoColor=white)
+![Three.js (R3F)](https://img.shields.io/badge/THREE.JS-000000?style=for-the-badge&logo=threedotjs&logoColor=white)
 
-First, run the development server:
+Современный, быстрый и стильный лендинг для сервиса **IT-инкубатор**. Проект построен на самых передовых технологиях веб-разработки с упором на эстетику, плавность анимаций, интеграцию 3D-графики и высокую конверсию.
+
+## 🎬 Демонстрация интерфейса
+
+> 📸 *Место для скриншота или GIF (Добавить файл `preview.png` и раскомментировать строку ниже)*
+> 
+> <!-- ![Превью сайта](./preview.png) -->
+
+## ✨ Ключевые особенности
+
+- **Интерактивное 3D:** Самособирающийся глянцевый кубик Рубика, написанный на React Three Fiber с кастомным контурным неоновым освещением.
+- **Плавные анимации:** Появление элементов, расходящиеся круги и физика кнопок реализованы с помощью Framer Motion.
+- **Оптимизация:** Динамический импорт (Lazy Loading) тяжелых 3D-сцен для мгновенной загрузки основного контента.
+- **Адаптивность:** Идеальное отображение на любых устройствах — от смартфонов до широкоформатных мониторов.
+
+## 🛠 Технологический стек
+
+- **Фреймворк:** [Next.js](https://nextjs.org/) (App Router)
+- **Стилизация:** [Tailwind CSS](https://tailwindcss.com/)
+- **Анимации:** [Framer Motion](https://www.framer.com/motion/)
+- **3D Графика:** [Three.js](https://threejs.org/) + [@react-three/fiber](https://docs.pmnd.rs/react-three-fiber/) + [@react-three/drei](https://github.com/pmndrs/drei)
+- **Язык:** [TypeScript](https://www.typescriptlang.org/)
+
+---
+
+## 🚀 Установка и запуск
+
+Следуйте этим инструкциям, чтобы развернуть копию проекта на вашем локальном компьютере для разработки и тестирования.
+
+### Предварительные требования
+
+Убедитесь, что у вас установлен **Node.js** (версии 18.x или выше) и пакетный менеджер (npm, yarn или pnpm).
+
+### Установка шагов
+
+1. **Клонируйте репозиторий:**
+   ```bash
+   git clone https://github.com/ibryaev/it-incubator/
+   ```
+
+2. **Перейдите в папку с проектом:**
+   ```bash
+   cd it-incubator/src/site/
+   ```
+
+3. **Установите зависимости:**
+   ```bash
+   npm install
+   ```
+
+4. **Запустите сервер разработки:**
+   ```bash
+   npm run dev
+   ```
+
+5. **Откройте проект:**
+   Перейдите в браузере по адресу [http://localhost:3000](http://localhost:3000). Вы должны увидеть загрузившуюся главную страницу с анимациями.
+
+---
+
+## 📦 Сборка для продакшена
+
+Для того чтобы скомпилировать проект для публикации на хостинге (Vercel, Railway, VPS и др.), выполните:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run build
+npm run start
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
