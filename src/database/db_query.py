@@ -1,8 +1,37 @@
 from psycopg import AsyncConnection, sql
-from psycopg.rows import namedtuple_row
-# from psycopg import Error as DbError
+from psycopg.rows import dict_row
+from psycopg.errors import UndefinedColumn
+from psycopg.types.enum import register_enum, EnumInfo
+
+from enum import Enum
+from typing import Optional#, Tuple, Dict
 
 import config
+from utils.types import User, Order
+
+class UserRole(str, Enum):
+    customer = "customer"
+    student = "student"
+    manager = "manager"
+    admin = "admin"
+
+class UserSpec(str, Enum):
+    frontend = "frontend"
+    backend = "backend"
+    fullstack = "fullstack"
+    analytic = "analytic"
+    tester = "tester"
+    designer = "designer"
+    devops = "devops"
+    other = "other"
+
+class OrderStatus(str, Enum):
+    created = "created"
+    taken = "taken"
+    testing = "testing"
+    done = "done"
+    canceled = "canceled"
+
 
 class DbQuery():
     def __init__(self):
@@ -15,101 +44,149 @@ class DbQuery():
             port        = config.DB_PORT,
             user        = config.DB_USER,
             password    = config.DB_PASSWORD,
-            row_factory = namedtuple_row
+            row_factory = dict_row
         )
 
-    async def user_create(self, first_name: str, **kwargs):
-        '''
-        Создаёт пользователя в БД.  
-        Для создания пользователя в БД требуется лишь один параметр - имя. Остальное (**kwargs) опционально.
-        '''
+        role_info = await EnumInfo.fetch(self.conn, "user_role_type")
+        spec_info = await EnumInfo.fetch(self.conn, "user_spec_type")
+        status_info = await EnumInfo.fetch(self.conn, "order_status_type")
+        register_enum(role_info, self.conn, UserRole)
+        register_enum(spec_info, self.conn, UserSpec)
+        register_enum(status_info, self.conn, OrderStatus)
+
+    #####################
+    #   Таблица users   #
+    #####################
+
+    async def user_create(
+        self,
+        first_name: str,
+        last_name: str | None = None,
+        role: str = "customer",
+        spec: list[str] | None = None,
+    ) -> tuple[Optional[User], Optional[str]]:
+        """
+        Создаёт пользователя в БД.
+
+        :param first_name: Имя пользователя. Единственный обязательный параметр.
+        :param last_name: Фамилия пользователя.
+        :param role: Роль человека в системе. Может равняться только :code:`('customer', 'student', 'manager', 'admin')`. По умолчанию :code:`customer`.
+        :param spec: Специализации человека. :code:`('frontend', 'backend', 'fullstack', 'analytic', 'tester', 'designer', 'devops', 'other')`.
+        :return: Возвращает класс :class:`src.types.user.User`, с данными созданного пользователя.
+        """
         try:
-            # columns - колонки, которые будут затронуты. params - значения, которые нужно вставить в эти колонки
-            # first_name гарантированно есть и идёт первым в таблице, поэтому он сразу добавляется в списки
-            columns = [sql.Identifier("first_name")]
-            params = [first_name]
-
-            for column, value in kwargs.items():
-                if value is not None: # Пустые значения не принимаются. В таком случае подставляется DEFAULT, прописанный в схеме (schema.sql)
-                    columns.append(sql.Identifier(column))
-                    params.append(value)
-            
-            query = sql.SQL("INSERT INTO users ({}) VALUES ({}) RETURNING *").format(
-                sql.SQL(", ").join(columns),
-                sql.SQL(", ").join([sql.Placeholder()] * len(params)) # Заглушек (%s) столько, сколько значений
-            )
-
             async with self.conn.cursor() as cur:
-                await cur.execute(query, params)
+                await cur.execute(
+                    """INSERT INTO users (first_name, last_name, role, spec) VALUES (%s, %s, %s, %s) RETURNING *""",
+                    (first_name, last_name, role, spec)
+                )
                 new_user = await cur.fetchone()
+                if new_user is None:
+                    return None, "Непредвиденная ошибка. Пользователь не был создан. Сообщите об этой ошибке"
                 await self.conn.commit()
-                return new_user, None
+                return User(**new_user), None
         except Exception as e:
-            print(f"database: user_create(): {e}")
+            print(f"database: user_create(): Ошибка: {e}")
             await self.conn.rollback()
             return None, str(e)
 
-    async def user_read(self, allow_None_values: bool = False, **kwargs):
-        '''
-        Находит ОДНОГО пользователя в БД, по данным параметрам.  
-        Если ``allow_None_values`` равен ``True``, то пустые значения тоже будут учитываться. По умолчанию ``False``.
-        '''
+    async def user_read(
+        self,
+        allow_None_values: bool = False,
+        **kwargs
+    ) -> tuple[Optional[User], Optional[str]]:
+        """
+        Находит ОДНОГО пользователя по заданым параметрам.
+
+        :param allow_None_values: Если :code:`False`, то будет пропускать параметры из kwargs, которые равны :code:`None`. Иначе совершает строгий поиск. 
+        :param **kwargs: Кварги, где ключ должен именоваться как таблица из БД, иначе он просто будет пропущен.
+        :return: Возвращает класс :class:`src.types.user.User`, с данными пользователя.
+        """
+        columns = []
+        params = []
+
+        # Выстраивание запроса и значений (query & params)
+        for column, value in kwargs.items():
+            if not allow_None_values and value is None:
+                continue
+            columns.append(sql.SQL("{} = %s").format(sql.Identifier(column)))
+            params.append(value)
+
+        query = sql.SQL("SELECT * FROM users WHERE {}").format(
+            sql.SQL(" AND ").join(columns)
+        )
+
+        # Выполнение
         try:
-            # columns - колонки, которые будут затронуты. params - значения, которые нужно вставить в эти колонки
-            columns = []
-            params = []
-
-            for column, value in kwargs.items():
-                if not allow_None_values and value is None:
-                    continue
-                columns.append(sql.SQL("{} = %s").format(sql.Identifier(column)))
-                params.append(value)
-
-            query = sql.SQL("SELECT * FROM users WHERE {}").format(
-                sql.SQL(" AND ").join(columns)
-            )
-
             async with self.conn.cursor() as cur:
                 await cur.execute(query, params)
                 user = await cur.fetchone()
-                return user, None
+                if user is None:
+                    return None, "Непредвиденная ошибка. Пользователь не был прочитан. Сообщите об этой ошибке"
+                return User(**user), None
+        except UndefinedColumn as e:
+            print(f"database: user_read(): Ошибка: В **kwargs передана несуществующая колонка. {e}")
+            return None, str(e)
         except Exception as e:
-            print(f"database: user_read(): {e}")
+            print(f"database: user_read(): Ошибка: {e}")
             return None, str(e)
 
-    async def user_read_all(self, allow_None_values: bool = False, **kwargs):
-        '''
-        Находит МНОЖЕСТВО пользователей в БД, по данным параметрам.  
-        Если ``allow_None_values`` равен ``True``, то пустые значения тоже будут учитываться. По умолчанию ``False``.
-        '''
+    async def user_readall(
+        self,
+        allow_None_values: bool = False,
+        **kwargs
+    ) -> tuple[Optional[list[User]], Optional[str]]:
+        """
+        Функция идентична :meth:`user_read`, но вместо одного пользователя, возвращает всех, найденных по заданым параметрам.
+
+        :return: Возвращает список, с классами :class:`src.types.user.User` всех найденных пользователей.
+        """
+        columns = []
+        params = []
+
+        # Выстраивание запроса и значений (query & params)
+        for column, value in kwargs.items():
+            if not allow_None_values and value is None:
+                continue
+            columns.append(sql.SQL("{} = %s").format(sql.Identifier(column)))
+            params.append(value)
+
+        query = sql.SQL("SELECT * FROM users WHERE {}").format(
+            sql.SQL(" AND ").join(columns)
+        )
+
+        # Выполнение
         try:
-            # columns - колонки, которые будут затронуты. params - значения, которые нужно вставить в эти колонки
-            columns = []
-            params = []
-
-            for column, value in kwargs.items():
-                if not allow_None_values and value is None:
-                    continue
-                columns.append(sql.SQL("{} = %s").format(sql.Identifier(column)))
-                params.append(value)
-
-            query = sql.SQL("SELECT * FROM users WHERE {}").format(
-                sql.SQL(" AND ").join(columns)
-            )
-
             async with self.conn.cursor() as cur:
                 await cur.execute(query, params)
                 users = await cur.fetchall()
-                return users, None
+                if users is None:
+                    return None, "Непредвиденная ошибка. Пользователи не был прочитаны. Сообщите об этой ошибке"
+                users_classes = []
+                for user in users:
+                    users_classes.append(User(**user))
+                return users_classes, None
+        except UndefinedColumn as e:
+            print(f"database: user_readall(): Ошибка: В **kwargs передана несуществующая колонка. {e}")
+            return None, str(e)
         except Exception as e:
-            print(f"database: user_read_all(): {e}")
+            print(f"database: user_readall(): Ошибка: {e}")
             return None, str(e)
 
-    async def user_update(self, user_id: int, allow_None_values: bool = False, **kwargs):
-        '''
-        Обновляет пользователя, у когорого колонка ``id`` равна ``user_id``, в БД.  
-        Если ``allow_None_values`` равен ``True``, то пустые значения тоже будут учитываться. По умолчанию ``False``.
-        '''
+    async def user_update(
+        self,
+        user_id: int,
+        allow_None_values: bool = False,
+        **kwargs
+    ) -> tuple[Optional[User], Optional[str]]:
+        """
+        Обновляет колонки данного пользователя, исходя из :code:`**kwargs`.
+
+        :param user_id: ID пользователя, чьи параметры подлежат обновлению.
+        :param allow_None_values: Если :code:`False`, то будет пропускать параметры из kwargs, которые равны :code:`None`. Иначе совершает строгое обновление.
+        :param **kwargs: Кварги, где ключ должен именоваться как таблица из БД, иначе он просто будет пропущен.
+        :return: Возвращает класс :class:`src.types.user.User`, с обновлёнными данными пользователя.
+        """
         try:
             # columns - колонки, которые будут затронуты. params - значения, которые нужно вставить в эти колонки
             columns = []
@@ -126,16 +203,29 @@ class DbQuery():
 
             async with self.conn.cursor() as cur:
                 await cur.execute(query, params)
-                new_user = await cur.fetchone()
+                updated_user = await cur.fetchone()
+                if updated_user is None:
+                    return None, "Непредвиденная ошибка. Пользователь не был обновлён. Сообщите об этой ошибке"
                 await self.conn.commit()
-                return new_user, None
+                return updated_user, None
+        except UndefinedColumn as e:
+            print(f"database: user_update(): Ошибка: В **kwargs передана несуществующая колонка. {e}")
+            await self.conn.rollback()
+            return None, str(e)
         except Exception as e:
-            print(f"database: user_update(): {e}")
+            print(f"database: user_update(): Ошибка: {e}")
             await self.conn.rollback()
             return None, str(e)
 
-    async def user_delete(self, user_id: int) -> bool:
-        '''Удаляет пользователя, у когорого колонка ``id`` равна ``user_id``, в БД.'''
+    async def user_delete(
+        self,
+        user_id: int
+    ) -> tuple[Optional[bool], Optional[str]]:
+        """
+        Удаляет данного пользователя из БД.
+
+        :return: Вернёт :code:`True` в случае успеха. Иначе :code:`False`.
+        """
         try:
             async with self.conn.cursor() as cur:
                 await cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
