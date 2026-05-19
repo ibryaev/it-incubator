@@ -1,3 +1,4 @@
+user_role_type = {'customer', 'student', 'manager', 'admin'}
 user_role = {
     "customer": "заказчик",
     "student": "студент",
@@ -5,6 +6,7 @@ user_role = {
     "admin": "администратор"
 }
 
+user_spec_type = {'frontend', 'backend', 'fullstack', 'analytic', 'tester', 'designer', 'devops', 'other'}
 user_spec = {
     "frontend": "фронтенд",
     "backend": "бэкенд",
@@ -16,6 +18,7 @@ user_spec = {
     "other": "другое"
 }
 
+order_status_type = {'created', 'taken', 'testing', 'done', 'canceled'}
 order_status = {
     "created": "создан",
     "taken": "взят",
