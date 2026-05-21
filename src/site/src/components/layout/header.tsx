@@ -4,7 +4,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useAnimate } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, LogIn } from "lucide-react";
 
 // --- Секретный ингредиент матового стекла: микро-текстура (SVG-шум) ---
 const MATTE_NOISE = "data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E";
@@ -328,12 +328,22 @@ export const Header = () => {
 
       {/* --- ПРАВАЯ КАПСУЛА --- */}
       <div className="pointer-events-auto h-[56px] shrink-0">
-        <LiquidPill className="px-4 flex items-center justify-center group cursor-pointer hover:bg-white/[0.02]">
-          <Link href="/login" className="flex items-center justify-center gap-2 px-4 h-full">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-pulse block"></span>
-            <span className="uppercase text-[13px] font-semibold text-gray-200 group-hover:text-white transition-colors">
-              Войти
-            </span>
+        <LiquidPill className="group cursor-pointer hover:bg-white/[0.02]">
+          <Link href="/login" className="flex items-center justify-center h-full min-w-[56px] px-0 md:px-6">
+            
+            {/* МОБИЛЬНАЯ ВЕРСИЯ: Иконка (видна только на маленьких экранах) */}
+            <div className="flex md:hidden items-center justify-center">
+              <LogIn className="w-5 h-5 text-blue-400 group-hover:text-white transition-colors" />
+            </div>
+
+            {/* ДЕСКТОПНАЯ ВЕРСИЯ: Точка + Текст (скрыта на мобилках) */}
+            <div className="hidden md:flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-pulse block"></span>
+              <span className="uppercase text-[13px] font-semibold text-gray-200 group-hover:text-white transition-colors">
+                Войти
+              </span>
+            </div>
+
           </Link>
         </LiquidPill>
       </div>
