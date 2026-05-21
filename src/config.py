@@ -8,6 +8,10 @@ DB_PORT=getenv("DB_PORT", "5432")
 DB_USER=getenv("DB_USER", "postgres")
 DB_PASSWORD=getenv("DB_PASSWORD", "")
 
+API_DOMAIN=getenv("API_DOMAIN", "127.0.0.1")
+API_PORT=int(getenv("API_PORT", "8000"))
+API_PROTOCOL=getenv("API_PROTOCOL", "http")
+
 db = database.DbQuery()
 
 EMAIL_RESTRICTED_DOMAINS = [
