@@ -1,0 +1,7 @@
+psycopg
+aiogram
+aiohttp
+aiohttp-socks
+python-dotenv
+fastapi
+uvicorn
