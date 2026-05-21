@@ -285,7 +285,7 @@ export const Header = () => {
           </nav>
 
           {/* Мобильный дропдаун */}
-          <div className="md:hidden flex flex-col w-full h-full">
+          <div className="md:hidden flex flex-col w-fit min-w-[150px]">
             <button 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="flex items-center justify-between w-full px-5 h-[44px] text-[13px] font-semibold text-white uppercase tracking-wider"
