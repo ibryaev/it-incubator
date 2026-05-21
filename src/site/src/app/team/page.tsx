@@ -1,4 +1,5 @@
 "use client";
+
 import { GlowingBackground } from "@/components/ui/glowing-bg";
 import { motion, Variants} from "framer-motion";
 import Image from "next/image";
