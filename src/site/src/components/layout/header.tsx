@@ -231,8 +231,8 @@ export const Header = () => {
       </div>
 
       {/* --- ЦЕНТРАЛЬНАЯ КАПСУЛА --- */}
-      <div className="pointer-events-auto flex-1 max-w-fit">
-        <LiquidPill className="p-1.5 flex flex-col justify-center min-w-[200px] md:min-w-fit min-h-[56px]">
+      <div className="pointer-events-auto flex-1 flex justify-center">
+        <LiquidPill className="p-1.5 flex flex-col justify-center min-w-fit md:min-w-fit min-h-[56px]">
           
           <nav 
             ref={navRef}
@@ -285,13 +285,14 @@ export const Header = () => {
           </nav>
 
           {/* Мобильный дропдаун */}
-          <div className="md:hidden flex flex-col w-fit min-w-[150px]">
+          <div className="md:hidden flex flex-col w-fit min-w-[130px]">
             <button 
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="flex items-center justify-between w-full px-5 h-[44px] text-[13px] font-semibold text-white uppercase tracking-wider"
+              className="flex items-center justify-between gap-3 w-full px-4 h-[44px] text-[13px] font-semibold text-white uppercase tracking-wider"
             >
+              {/* Добавили gap-3 и уменьшили px-5 до px-4 для компактности */}
               {currentTab.name}
-              <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${mobileMenuOpen ? "rotate-180" : ""}`} />
+              <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-300 ${mobileMenuOpen ? "rotate-180" : ""}`} />
             </button>
 
             <AnimatePresence>
