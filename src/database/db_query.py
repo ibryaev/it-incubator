@@ -60,28 +60,47 @@ class DbQuery():
 
     async def user_create(
         self,
+        email: str,
+        password: str,
         first_name: str,
-        last_name: str | None = None,
-        role: str = "customer",
-        spec: list[str] | None = None,
+        last_name: Optional[str] = None,
+        role: Optional[str] = None,
+        spec: Optional[list[str]] = None,
     ) -> tuple[Optional[User], Optional[str]]:
         """
         Создаёт пользователя в БД.
 
-        :param first_name: Имя пользователя. Единственный обязательный параметр.
+        :param email: Электронная почта, привязанная к учётной записи.
+        :param password: Пароль (нехэшированный) к учётной записи.
+        :param first_name: Имя пользователя.
         :param last_name: Фамилия пользователя.
-        :param role: Роль человека в системе. Может равняться только :code:`('customer', 'student', 'manager', 'admin')`. По умолчанию :code:`customer`.
+        :param role: Роль человека в системе. Может равняться только :code:`('customer', 'student', 'manager', 'admin')`.
         :param spec: Специализации человека. :code:`('frontend', 'backend', 'fullstack', 'analytic', 'tester', 'designer', 'devops', 'other')`.
-        :return: Возвращает класс :class:`src.types.user.User`, с данными созданного пользователя.
+        :return: Возвращает :class:`src.utils.types.user.User`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе Класс будет :code:`None`.
         """
         try:
             async with self.conn.cursor() as cur:
                 await cur.execute(
-                    """INSERT INTO users (first_name, last_name, role, spec) VALUES (%s, %s, %s, %s) RETURNING *""",
-                    (first_name, last_name, role, spec)
+                    """
+                    SELECT 1 FROM users WHERE email = %s
+                    """,
+                    (email,)
+                )
+                result = await cur.fetchone()
+                if result:
+                    return None, "Ошибка. Учётная запись с такой эл. почтой уже существует"
+
+                await cur.execute(
+                    """
+                    INSERT INTO users (email, password, first_name, last_name, role, spec)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    RETURNING *
+                    """,
+                    (email, password, first_name, last_name, role or config.ROLE_DEFAULT, spec)
                 )
                 new_user = await cur.fetchone()
                 if new_user is None:
+                    await self.conn.rollback()
                     return None, "Непредвиденная ошибка. Пользователь не был создан. Сообщите об этой ошибке"
                 await self.conn.commit()
                 return User(**new_user), None
@@ -100,7 +119,7 @@ class DbQuery():
 
         :param allow_None_values: Если :code:`False`, то будет пропускать параметры из kwargs, которые равны :code:`None`. Иначе совершает строгий поиск. 
         :param **kwargs: Кварги, где ключ должен именоваться как таблица из БД, иначе он просто будет пропущен.
-        :return: Возвращает класс :class:`src.types.user.User`, с данными пользователя.
+        :return: Возвращает :class:`src.utils.types.user.User`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе Класс будет :code:`None`.
         """
         columns = []
         params = []
@@ -122,7 +141,7 @@ class DbQuery():
                 await cur.execute(query, params)
                 user = await cur.fetchone()
                 if user is None:
-                    return None, "Непредвиденная ошибка. Пользователь не был прочитан. Сообщите об этой ошибке"
+                    return None, "Пользователь не найден"
                 return User(**user), None
         except UndefinedColumn as e:
             print(f"database: user_read(): Ошибка: В **kwargs передана несуществующая колонка. {e}")
@@ -139,7 +158,9 @@ class DbQuery():
         """
         Функция идентична :meth:`user_read`, но вместо одного пользователя, возвращает всех, найденных по заданым параметрам.
 
-        :return: Возвращает список, с классами :class:`src.types.user.User` всех найденных пользователей.
+        :param allow_None_values: Если :code:`False`, то будет пропускать параметры из kwargs, которые равны :code:`None`. Иначе совершает строгий поиск. 
+        :param **kwargs: Кварги, где ключ должен именоваться как таблица из БД, иначе он просто будет пропущен.
+        :return: Возвращает список :class:`src.utils.types.user.User`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе список классов будет :code:`None`.
         """
         columns = []
         params = []
@@ -161,7 +182,7 @@ class DbQuery():
                 await cur.execute(query, params)
                 users = await cur.fetchall()
                 if users is None:
-                    return None, "Непредвиденная ошибка. Пользователи не был прочитаны. Сообщите об этой ошибке"
+                    return None, "По данным критериям никто не был найден"
                 users_classes = []
                 for user in users:
                     users_classes.append(User(**user))
@@ -185,7 +206,7 @@ class DbQuery():
         :param user_id: ID пользователя, чьи параметры подлежат обновлению.
         :param allow_None_values: Если :code:`False`, то будет пропускать параметры из kwargs, которые равны :code:`None`. Иначе совершает строгое обновление.
         :param **kwargs: Кварги, где ключ должен именоваться как таблица из БД, иначе он просто будет пропущен.
-        :return: Возвращает класс :class:`src.types.user.User`, с обновлёнными данными пользователя.
+        :return: Возвращает список :class:`src.utils.types.user.User`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе список классов будет :code:`None`.
         """
         try:
             # columns - колонки, которые будут затронуты. params - значения, которые нужно вставить в эти колонки
@@ -205,9 +226,10 @@ class DbQuery():
                 await cur.execute(query, params)
                 updated_user = await cur.fetchone()
                 if updated_user is None:
+                    await self.conn.rollback()
                     return None, "Непредвиденная ошибка. Пользователь не был обновлён. Сообщите об этой ошибке"
                 await self.conn.commit()
-                return updated_user, None
+                return User(**updated_user), None
         except UndefinedColumn as e:
             print(f"database: user_update(): Ошибка: В **kwargs передана несуществующая колонка. {e}")
             await self.conn.rollback()
@@ -224,7 +246,7 @@ class DbQuery():
         """
         Удаляет данного пользователя из БД.
 
-        :return: Вернёт :code:`True` в случае успеха. Иначе :code:`False`.
+        :return: Возвращает :code:`True` в случае успеха. Иначе :code:`False`., текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе :code:`bool` будет :code:`None`.
         """
         try:
             async with self.conn.cursor() as cur:

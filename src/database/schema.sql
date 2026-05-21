@@ -15,16 +15,17 @@ END $$;
 
 CREATE TABLE IF NOT EXISTS users (                      -- Таблица с учётными записями
     id SERIAL PRIMARY KEY,                              -- Уникальный ID (user_id, uid). Просто SERIAL
-    email TEXT NOT NULL,
-    password_hash TEXT NOT NULL,
-    first_name VARCHAR(64) NOT NULL,                    -- Имя пользователя. ОБЯЗАТЕЛЬНАЯ КОЛОНКА
+    email TEXT NOT NULL,                                -- Электронная почта учётной записи
+    password_hash TEXT NOT NULL,                        -- Зашифрованный пароль от учётной записи
+    first_name VARCHAR(64) NOT NULL,                    -- Имя пользователя
     last_name VARCHAR(64) DEFAULT NULL,                 -- Фамилия
     bio VARCHAR(384) DEFAULT NULL,                      -- Краткое описание человека
     "role" user_role_type NOT NULL DEFAULT 'customer',  -- Роль человека в системе: заказчик, студент (исполнитель), преподаватель (менеджер), админ
     spec user_spec_type[] DEFAULT '{}',                 -- Спецификация человека, как и требовалось в ТЗ
     orders_created INTEGER[] DEFAULT '{}',              -- Массив orders(id), созданных этим человеком
     orders_pinned INTEGER[] DEFAULT '{}',               -- Массив orders(id), прикреплённые за этим человеком
-    date_reg TIMESTAMPTZ NOT NULL DEFAULT NOW()         -- Дата регистрации в виде UNIX timestamp
+    date_reg TIMESTAMPTZ NOT NULL DEFAULT NOW(),        -- Дата регистрации в виде UNIX timestamp
+    UNIQUE(email)
 );
 
 CREATE TABLE IF NOT EXISTS orders (                                             -- Таблица с заказами

@@ -1,20 +1,25 @@
-from utils import user_role, user_spec
+#from utils import user_role, user_spec
 from datetime import datetime
+from typing import Optional
 
 class User:
     def __init__(
         self,
         id: int,
+        email: str,
+        password_hash: str,
         first_name: str,
-        last_name: str | None = None,
-        bio: str | None = None,
-        role: str | None = None,
-        spec: list[str] | None = None,
-        orders_created: list[int] | None = None,
-        orders_pinned: list[int] | None = None,
-        date_reg: datetime | None = None
+        last_name: Optional[str] = None,
+        bio: Optional[str] = None,
+        role: Optional[str] = None,
+        spec: Optional[list[str]] = None,
+        orders_created: Optional[list[int]] = None,
+        orders_pinned: Optional[list[int]] = None,
+        date_reg: Optional[datetime] = None
     ) -> None:
         self.id=id
+        self.email=email
+        self.password_hash=password_hash
         self.first_name=first_name
         self.last_name=last_name
         self.bio=bio
@@ -29,15 +34,3 @@ class User:
         if self.last_name:
             return f"{self.first_name} {self.last_name}"
         return self.first_name
-
-    def __str__(self) -> str:
-        role_text = user_role.get(self.role, "неизвестно")
-        bio_text = self.bio or "Нет описания."
-        spec_text = [user_spec[spec] for spec in self.spec] if self.spec else []
-        spec_text = ", ".join(spec_text) if self.spec else "Специальности не указаны"
-
-        return (
-            f"{self.full_name} (№{self.id}) - {role_text}\n"
-            f"{bio_text} | {spec_text}.\n"
-            f"Дата регистрации: {self.date_reg.strftime('%R')}"
-        )
