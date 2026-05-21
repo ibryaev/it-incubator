@@ -4,15 +4,15 @@ import Image from "next/image";
 import { MouseEvent } from "react";
 
 const leftColData =[
-  { id: 'tg', iconSrc: "/assets/tg-icon.png", label: "TELEGRAM" },
-  { id: 'vs', iconSrc: "/assets/vscode-icon.png", label: "VS CODE" },
-  { id: 'nx', iconSrc: "/assets/next-icon.png", label: "NEXT JS" },
+  { id: 'tg', iconSrc: "/it-incubator/assets/tg-icon.png", label: "TELEGRAM" },
+  { id: 'vs', iconSrc: "/it-incubator/assets/vscode-icon.png", label: "VS CODE" },
+  { id: 'nx', iconSrc: "/it-incubator/assets/next-icon.png", label: "NEXT JS" },
 ];
 
 const rightColData =[
-  { id: 'py', iconSrc: "/assets/pycharm-icon.png", label: "PYCHARM" },
-  { id: 'pg', iconSrc: "/assets/postgres-icon.png", label: "POSTGRESQL" },
-  { id: 'gh', iconSrc: "/assets/github-icon.png", label: "GITHUB" },
+  { id: 'py', iconSrc: "/it-incubator/assets/pycharm-icon.png", label: "PYCHARM" },
+  { id: 'pg', iconSrc: "/it-incubator/assets/postgres-icon.png", label: "POSTGRESQL" },
+  { id: 'gh', iconSrc: "/it-incubator/assets/github-icon.png", label: "GITHUB" },
 ];
 
 export const OurStackSection = () => {
@@ -37,9 +37,9 @@ export const OurStackSection = () => {
           <div className="absolute top-0 left-0 w-[80%] h-[80%] bg-purple-600/20 blur-[120px] rounded-full pointer-events-none" />
           
           <div className="relative h-48 w-full max-w-xs mb-8">
-            <Floating3DIcon src="/assets/3d-python.png" className="top-[0%] left-[10%] w-20" delay={0} />
-            <Floating3DIcon src="/assets/3d-js.png" className="top-[40%] left-[0%] w-16" delay={0.2} />
-            <Floating3DIcon src="/assets/3d-react.png" className="top-[30%] left-[35%] w-16" delay={0.4} />
+            <Floating3DIcon src="/it-incubator/assets/3d-python.png" className="top-[0%] left-[10%] w-20" delay={0} />
+            <Floating3DIcon src="/it-incubator/assets/3d-js.png" className="top-[40%] left-[0%] w-16" delay={0.2} />
+            <Floating3DIcon src="/it-incubator/assets/3d-react.png" className="top-[30%] left-[35%] w-16" delay={0.4} />
           </div>
 
           <motion.h2 

@@ -122,7 +122,7 @@ export const TechSection = () => {
           {/* 1. Верхний левый (HTML) */}
           <PlatformNode 
             platformClass="top-[20%] left-[5%] w-[35%]"
-            iconSrc="/assets/icon-html.png"
+            iconSrc="/it-incubator/assets/icon-html.png"
             iconClass="-top-[35%] left-[25%] w-[50%]"
             delay={0}
             zIndex="z-0"
@@ -131,7 +131,7 @@ export const TechSection = () => {
           {/* 2. Верхний правый (Figma) */}
           <PlatformNode 
             platformClass="top-[27%] right-[25%] w-[50%]"
-            iconSrc="/assets/icon-figma.png"
+            iconSrc="/it-incubator/assets/icon-figma.png"
             iconClass="-top-[30%] left-[25%] w-[50%]"
             delay={0.8}
             zIndex="z-10"
@@ -140,7 +140,7 @@ export const TechSection = () => {
           {/* 3. Нижний правый (CSS) */}
           <PlatformNode 
             platformClass="top-[52%] right-[7%] w-[35%]"
-            iconSrc="/assets/icon-css.png"
+            iconSrc="/it-incubator/assets/icon-css.png"
             iconClass="-top-[30%] left-[25%] w-[50%]"
             delay={0.4}
             zIndex="z-20"
@@ -149,7 +149,7 @@ export const TechSection = () => {
           {/* 4. Нижний левый (TS) */}
           <PlatformNode 
             platformClass="top-[55%] left-[5%] w-[35%]"
-            iconSrc="/assets/icon-ts.png"
+            iconSrc="/it-incubator/assets/icon-ts.png"
             iconClass="-top-[35%] left-[20%] w-[60%]"
             delay={1.2}
             zIndex="z-30"
@@ -179,7 +179,7 @@ const PlatformNode = ({ platformClass, iconSrc, iconClass, delay, zIndex }: Plat
       
       {/* База платформы (куб) */}
       <Image 
-        src="/assets/platform.png" 
+        src="/it-incubator/assets/platform.png" 
         alt="platform" 
         fill 
         className="object-contain drop-shadow-xl" 

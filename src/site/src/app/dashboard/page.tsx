@@ -23,7 +23,7 @@ const projectsData =[
       "Официальный сайт дачного поселка Зеленые Дачи. Вся информация о свободных участках, ценах, инфраструктуре и правилах покупки.",
     status: "В разработке",
     statusColor: "text-yellow-500",
-    image: "/assets/project-placeholder-1.png",
+    image: "/it-incubator/assets/project-placeholder-1.png",
   },
   {
     id: 2,
@@ -32,7 +32,7 @@ const projectsData =[
       "Официальный информационный ресурс дачного поселка Зеленые Дачи. Публикация нормативной документации, отчетов о благоустройстве и новостей для жителей.",
     status: "Готов",
     statusColor: "text-green-500",
-    image: "/assets/project-placeholder-2.png",
+    image: "/it-incubator/assets/project-placeholder-2.png",
   },
   // Новые проекты
   {
@@ -42,7 +42,7 @@ const projectsData =[
       "Бот для автоматического сбора заявок от клиентов, интеграции с CRM-системой и умного распределения задач между менеджерами.",
     status: "Готов",
     statusColor: "text-green-500",
-    image: "/assets/project-placeholder-3.png",
+    image: "/it-incubator/assets/project-placeholder-3.png",
   },
   {
     id: 4,
@@ -51,7 +51,7 @@ const projectsData =[
       "Админ-панель для мониторинга активности пользователей, сбора статистики и управления доступом сотрудников.",
     status: "В разработке",
     statusColor: "text-yellow-500",
-    image: "/assets/project-placeholder-4.png",
+    image: "/it-incubator/assets/project-placeholder-4.png",
   },
 ];
 

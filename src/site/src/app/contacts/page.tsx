@@ -1,5 +1,5 @@
 "use client";
-import { Header } from "@/components/layout/header";
+
 import { GlowingBackground } from "@/components/ui/glowing-bg";
 import { LiquidButton } from "@/components/ui/liquid-button";
 import { ArrowLeft } from "lucide-react";

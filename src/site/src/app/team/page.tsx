@@ -16,7 +16,7 @@ const teamMembers =[
       "Senior Tomato Grower в свободное время",
       "Умеет выходить из VIM без гугла"
     ],
-    image: "/assets/team/ivan.png",
+    image: "/it-incubator/assets/team/ivan.png",
   },
   {
     surname: "ПЕТРОВ",
@@ -27,7 +27,7 @@ const teamMembers =[
       "Мастер рекурсивного заваривания кофе",
       "Ex-NASA Pixel Shifter"
     ],
-    image: "/assets/team/petrov.png",
+    image: "/it-incubator/assets/team/petrov.png",
   },
   {
     surname: "СЕМЁНОВ",
@@ -38,7 +38,7 @@ const teamMembers =[
       "Main-тестировщик интернета на наличие котиков",
       "Founder of 'Vibe-First' Development"
     ],
-    image: "/assets/team/semenov.png",
+    image: "/it-incubator/assets/team/semenov.png",
   },
 ];
 

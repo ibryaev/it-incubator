@@ -11,7 +11,7 @@ export const DashboardIllustration = () => {
       {/* 1. СТАТИЧНЫЙ СЛОЙ (Связи и ноды) */}
       <div className="absolute inset-0 z-10 translate-y-32">
         <Image 
-          src="/assets/dashboard-mockup.png" 
+          src="/it-incubator/assets/dashboard-mockup.png" 
           alt="Dashboard Connections" 
           fill 
           className="object-contain opacity-80" // Чуть приглушил, чтобы окно лучше выделялось
@@ -29,7 +29,7 @@ export const DashboardIllustration = () => {
         className="absolute inset-0 z-20"
       >
         <Image 
-          src="/assets/dashboard-mockup-fly.png" 
+          src="/it-incubator/assets/dashboard-mockup-fly.png" 
           alt="Dashboard UI" 
           fill 
           className="object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.6)]" // Добавил мощную тень для глубины
