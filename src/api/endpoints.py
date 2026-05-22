@@ -14,6 +14,17 @@ import methods
 router = APIRouter()
 
 
+@router.get("/")
+async def api_ping():
+    return {
+        "status": True,
+        "timestamp": datetime.now()
+    }
+
+#####################
+#   Пользователи    #
+#####################
+
 class UserRegister(BaseModel):
     email: str
     password: str
@@ -34,13 +45,6 @@ class UserSearch(BaseModel):
     role: Optional[str]         = None
     spec: Optional[list[str]]   = None
 
-
-@router.get("/")
-async def ping_api():
-    return {
-        "status": True,
-        "timestamp": datetime.now()
-    }
 
 @router.post("/users/register")
 async def user_register(
@@ -270,6 +274,56 @@ async def user_delete(
         raise HTTPException(403, user['error'])
 
     result = await methods.delete_account(user['id'])
+    if "error" in result:
+        raise HTTPException(403, result['error'])
+    return result
+
+#############
+#   Заказы  #
+#############
+
+class OrderCreate(BaseModel):
+    title: str
+    techspec: str
+    customer_id: int
+
+
+@router.post("/orders/create")
+async def order_create(
+    request: OrderCreate
+) -> dict:
+    """
+    
+    """
+    order = await methods.create_order(
+        request.title,
+        request.techspec,
+        request.customer_id
+    )
+    if "error" in order:
+        raise HTTPException(403, order['error'])
+    return order
+
+@router.get("/orders/read/{order_id}")
+async def order_read(
+    order_id: int
+) -> dict:
+    """
+    
+    """
+    order = await methods.read_order(order_id)
+    if "error" in order:
+        raise HTTPException(403, order['error'])
+    return order
+
+@router.delete("/orders/close")
+async def order_close(
+    order_id: int
+) -> dict:
+    """
+    
+    """
+    result = await methods.close_order(order_id)
     if "error" in result:
         raise HTTPException(403, result['error'])
     return result

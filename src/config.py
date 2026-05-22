@@ -24,4 +24,5 @@ LAST_NAME_MAX_LEN = 64      # По умолчанию 64
 BIO_MAX_LEN = 384           # По умолчанию 384
 ROLE_DEFAULT = 'customer'   # По умолчанию 'customer'
 TITLE_MAX_LEN = 192         # По умолчанию 192
+TECHSPEC_MIN_LEN = 128      # По умолчанию 128
 STATUS_DEFAULT = 'created'  # По умолчанию 'created'
