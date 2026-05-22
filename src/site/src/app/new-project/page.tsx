@@ -56,7 +56,7 @@ export default function NewProjectPage() {
     console.log("Готово к отправке на сервер:", payload);
 
     // TODO: Здесь будет запрос к бэкенду, когда напишешь эндпоинт POST /orders/create
-    // await fetch("http://subbota.tech/orders/create", {
+    // await fetch("https://subbota.tech/orders/create", {
     //   method: "POST",
     //   headers: { "Content-Type": "application/json" },
     //   body: JSON.stringify(payload)
