@@ -38,7 +38,7 @@ async def ping_api():
         "timestamp": datetime.now()
     }
 
-@router.post("/api/users/register")
+@router.post("/users/register")
 async def user_register(
     request: UserRegister
 ) -> dict:
@@ -46,12 +46,19 @@ async def user_register(
     Зарегистрировать учётную запись.  
     Принимает в :code:`Header` :class:`UserRegister`.
     """
-    user = await methods.register_account(**request)
+    user = await methods.register_account(
+        request.email,
+        request.password,
+        request.first_name,
+        request.last_name,
+        request.role,
+        request.spec
+    )
     if "error" in user:
         raise HTTPException(403, user['error'])
     return user
 
-@router.post("/api/users/login")
+@router.post("/users/login")
 async def user_login(
     request: UserLogin
 ) -> dict:
@@ -59,12 +66,15 @@ async def user_login(
     Войти в учётную запись.  
     Принимает в :code:`Header` :class:`UserLogin`.
     """
-    user = await methods.login_account(**request)
+    user = await methods.login_account(
+        request.email,
+        request.password
+    )
     if "error" in user:
         raise HTTPException(403, user['error'])
     return user
 
-@router.get("/api/users/read/{user_id}")
+@router.get("/users/read/{user_id}")
 async def user_read(
     user_id: int
 ) -> dict:
@@ -76,7 +86,7 @@ async def user_read(
         raise HTTPException(403, user['error'])
     return user
 
-@router.post("/api/users/search")
+@router.post("/users/search")
 async def user_search(
     request: UserSearch
 ) -> dict:
@@ -84,12 +94,19 @@ async def user_search(
     Найти учётные записи по данным параметрам.  
     Принимает в :code:`Header` :class:`UserSearch`.
     """
-    users = await methods.search_accounts(**request)
+    users = await methods.search_accounts(
+        request.email,
+        request.first_name,
+        request.last_name,
+        request.bio,
+        request.role,
+        request.spec
+    )
     if "error" in users:
         raise HTTPException(403, users['error'])
     return users
 
-@router.post("/api/users/update/email")
+@router.post("/users/update/email")
 async def user_update_email(
     request: UserLogin,
     new_email: str = Header(..., alias="new_email")
@@ -98,15 +115,22 @@ async def user_update_email(
     Обновить электронную почту данной учётной записи.  
     Принимает в :code:`Header` :class:`UserLogin` и :code:`new_email: str`.
     """
-    user = await methods.login_account(**request)
+    user = await methods.login_account(
+        request.email,
+        request.password
+    )
     if "error" in user:
         raise HTTPException(403, user['error'])
-    result = await methods.update_account_email(user['id'], new_email)
+
+    result = await methods.update_account_email(
+        user['id'],
+        new_email
+    )
     if "error" in result:
         raise HTTPException(403, user['error'])
     return result
 
-@router.post("/api/users/update/password")
+@router.post("/users/update/password")
 async def user_update_password(
     request: UserLogin,
     new_password: str = Header(..., alias="new_password")
@@ -115,15 +139,22 @@ async def user_update_password(
     Обновить пароль данной учётной записи.  
     Принимает в :code:`Header` :class:`UserLogin` и :code:`new_password: str` (данный пароль должен быть в незашифрованном виде).
     """
-    user = await methods.login_account(**request)
+    user = await methods.login_account(
+        request.email,
+        request.password
+    )
     if "error" in user:
         raise HTTPException(403, user['error'])
-    result = await methods.update_account_password(user['id'], new_password)
+
+    result = await methods.update_account_password(
+        user['id'],
+        new_password
+    )
     if "error" in result:
         raise HTTPException(403, user['error'])
     return result
 
-@router.post("/api/users/update/names")
+@router.post("/users/update/names")
 async def user_update_names(
     request: UserLogin,
     new_first_name: str = Optional[Header(..., alias="new_fist_name")],
@@ -133,15 +164,23 @@ async def user_update_names(
     Обновить имя, фамилию данной учётной записи.  
     Принимает в :code:`Header` :class:`UserLogin`, :code:`new_first_name: str` и :code:`new_last_name: str`.
     """
-    user = await methods.login_account(**request)
+    user = await methods.login_account(
+        request.email,
+        request.password
+    )
     if "error" in user:
         raise HTTPException(403, user['error'])
-    result = await methods.update_account_names(user['id'], new_first_name, new_last_name)
+
+    result = await methods.update_account_names(
+        user['id'],
+        new_first_name,
+        new_last_name
+    )
     if "error" in result:
         raise HTTPException(403, user['error'])
     return result
 
-@router.post("/api/users/update/bio")
+@router.post("/users/update/bio")
 async def user_update_bio(
     request: UserLogin,
     new_bio: str = Header(..., alias="new_bio")
@@ -150,15 +189,22 @@ async def user_update_bio(
     Обновить поле "О себе" данной учётной записи.  
     Принимает в :code:`Header` :class:`UserLogin` и :code:`new_bio: str`.
     """
-    user = await methods.login_account(**request)
+    user = await methods.login_account(
+        request.email,
+        request.password
+    )
     if "error" in user:
         raise HTTPException(403, user['error'])
-    result = await methods.update_account_bio(user['id'], new_bio)
+
+    result = await methods.update_account_bio(
+        user['id'],
+        new_bio
+    )
     if "error" in result:
         raise HTTPException(403, user['error'])
     return result
 
-@router.post("/api/users/update/spec")
+@router.post("/users/update/spec")
 async def user_update_spec(
     request: UserLogin,
     new_spec: list[str] = Header(..., alias="new_spec")
@@ -167,15 +213,23 @@ async def user_update_spec(
     Обновить специальности данной учётной записи.  
     Принимает в :code:`Header` :class:`UserLogin` и :code:`new_spec: list[str]`.
     """
-    user = await methods.login_account(**request)
+    user = await methods.login_account(
+        request.email,
+        request.password
+    )
     if "error" in user:
         raise HTTPException(403, user['error'])
-    result = await methods.update_account_spec(user['id'], new_spec, True)
+
+    result = await methods.update_account_spec(
+        user['id'],
+        new_spec,
+        True
+    )
     if "error" in result:
         raise HTTPException(403, user['error'])
     return result
 
-@router.delete("/api/users/delete")
+@router.delete("/users/delete")
 async def user_delete(
     request: UserLogin
 ) -> dict:
@@ -183,9 +237,13 @@ async def user_delete(
     Удаляет учётную запись.  
     Принимает в :code:`Header` :class:`UserLogin`.
     """
-    user = await methods.login_account(**request)
+    user = await methods.login_account(
+        request.email,
+        request.password
+    )
     if "error" in user:
         raise HTTPException(403, user['error'])
+
     result = await methods.delete_account(user['id'])
     if "error" in result:
         raise HTTPException(403, result['error'])
