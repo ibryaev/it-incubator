@@ -38,7 +38,7 @@ async def ping_api():
         "timestamp": datetime.now()
     }
 
-@router.post("/users/register")
+@router.post("/api/users/register")
 async def user_register(
     request: UserRegister
 ) -> dict:
@@ -51,7 +51,7 @@ async def user_register(
         raise HTTPException(403, user['error'])
     return user
 
-@router.post("/users/login")
+@router.post("/api/users/login")
 async def user_login(
     request: UserLogin
 ) -> dict:
@@ -64,7 +64,7 @@ async def user_login(
         raise HTTPException(403, user['error'])
     return user
 
-@router.get("/users/read/{user_id}")
+@router.get("/api/users/read/{user_id}")
 async def user_read(
     user_id: int
 ) -> dict:
@@ -76,7 +76,7 @@ async def user_read(
         raise HTTPException(403, user['error'])
     return user
 
-@router.post("/users/search")
+@router.post("/api/users/search")
 async def user_search(
     request: UserSearch
 ) -> dict:
@@ -89,7 +89,7 @@ async def user_search(
         raise HTTPException(403, users['error'])
     return users
 
-@router.post("/users/update/email")
+@router.post("/api/users/update/email")
 async def user_update_email(
     request: UserLogin,
     new_email: str = Header(..., alias="new_email")
@@ -106,7 +106,7 @@ async def user_update_email(
         raise HTTPException(403, user['error'])
     return result
 
-@router.post("/users/update/password")
+@router.post("/api/users/update/password")
 async def user_update_password(
     request: UserLogin,
     new_password: str = Header(..., alias="new_password")
@@ -123,7 +123,7 @@ async def user_update_password(
         raise HTTPException(403, user['error'])
     return result
 
-@router.post("/users/update/names")
+@router.post("/api/users/update/names")
 async def user_update_names(
     request: UserLogin,
     new_first_name: str = Optional[Header(..., alias="new_fist_name")],
@@ -141,7 +141,7 @@ async def user_update_names(
         raise HTTPException(403, user['error'])
     return result
 
-@router.post("/users/update/bio")
+@router.post("/api/users/update/bio")
 async def user_update_bio(
     request: UserLogin,
     new_bio: str = Header(..., alias="new_bio")
@@ -158,7 +158,7 @@ async def user_update_bio(
         raise HTTPException(403, user['error'])
     return result
 
-@router.post("/users/update/spec")
+@router.post("/api/users/update/spec")
 async def user_update_spec(
     request: UserLogin,
     new_spec: list[str] = Header(..., alias="new_spec")
@@ -175,7 +175,7 @@ async def user_update_spec(
         raise HTTPException(403, user['error'])
     return result
 
-@router.delete("/users/delete")
+@router.delete("/api/users/delete")
 async def user_delete(
     request: UserLogin
 ) -> dict:

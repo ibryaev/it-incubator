@@ -44,8 +44,8 @@ export default function LoginPage() {
   const handleLogin = async () => {
     setError("");
     try {
-      // Обязательно поменяй в бэкенде @router.get на @router.post для /users/login
-      const res = await fetch("http://localhost:8000/users/login", {
+      // Обязательно поменяй в бэкенде @router.get на @router.post для /api/users/login
+      const res = await fetch("http://localhost:8000/api/users/login", {
         method: "POST", 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
