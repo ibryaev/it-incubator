@@ -10,7 +10,8 @@ export type User = {
   first_name: string;
   last_name: string | null;
   role: string;
-  passwordRaw?: string; // Сохраняем пароль локально, так как твой API требует его для обновлений
+  passwordRaw?: string; 
+  avatar_url?: string | null;
 };
 
 type AuthContextType = {

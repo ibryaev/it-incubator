@@ -1,10 +1,12 @@
 "use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useAnimate } from "framer-motion";
-import { ChevronDown, LogIn } from "lucide-react";
+import { User as UserIcon, ChevronDown, LogIn } from "lucide-react";
+import { useAuth } from "@/app/auth-provider";
 
 // --- Секретный ингредиент матового стекла: микро-текстура (SVG-шум) ---
 const MATTE_NOISE = "data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E";
@@ -152,6 +154,7 @@ const LiquidPill = ({ children, className = "" }: { children: React.ReactNode, c
 
 // --- ОСНОВНОЙ КОМПОНЕНТ HEADER ---
 export const Header = () => {
+  const { user } = useAuth();
   const pathname = usePathname() || "/";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -327,26 +330,32 @@ export const Header = () => {
       </div>
 
       {/* --- ПРАВАЯ КАПСУЛА --- */}
-      <div className="pointer-events-auto h-[56px] shrink-0">
-        <LiquidPill className="group cursor-pointer hover:bg-white/[0.02]">
-          <Link href="/login" className="flex items-center justify-center h-full min-w-[56px] px-0 md:px-6">
-            
-            {/* МОБИЛЬНАЯ ВЕРСИЯ: Иконка (видна только на маленьких экранах) */}
-            <div className="flex md:hidden items-center justify-center">
-              <LogIn className="w-5 h-5 text-blue-400 group-hover:text-white transition-colors" />
-            </div>
+    <div className="pointer-events-auto h-[56px] shrink-0">
+      <LiquidPill className="group cursor-pointer hover:bg-white/[0.02]">
+        {/* Если юзер есть — ведем в кабинет, если нет — на логин */}
+        <Link href={user ? "/dashboard" : "/login"} className="flex items-center justify-center h-full min-w-[56px] px-0 md:px-6">
+          
+          <div className="flex md:hidden items-center justify-center">
+            {user ? (
+               <UserIcon className="w-5 h-5 text-green-400 group-hover:text-white transition-colors" />
+            ) : (
+               <LogIn className="w-5 h-5 text-blue-400 group-hover:text-white transition-colors" />
+            )}
+          </div>
 
-            {/* ДЕСКТОПНАЯ ВЕРСИЯ: Точка + Текст (скрыта на мобилках) */}
-            <div className="hidden md:flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)] animate-pulse block"></span>
-              <span className="uppercase text-[13px] font-semibold text-gray-200 group-hover:text-white transition-colors">
-                Войти
-              </span>
-            </div>
+          <div className="hidden md:flex items-center gap-2">
+            {/* Точка меняет цвет: зеленая для авторизованных, синяя для гостей */}
+            <span className={`w-2.5 h-2.5 rounded-full shadow-lg animate-pulse block ${
+              user ? "bg-green-500 shadow-green-500/50" : "bg-blue-500 shadow-blue-500/50"
+            }`}></span>
+            <span className="uppercase text-[13px] font-semibold text-gray-200 group-hover:text-white transition-colors">
+              {user ? "Кабинет" : "Войти"}
+            </span>
+          </div>
 
-          </Link>
-        </LiquidPill>
-      </div>
+        </Link>
+      </LiquidPill>
+    </div>
 
     </header>
   );
