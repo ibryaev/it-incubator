@@ -54,14 +54,15 @@ export default function RegisterPage() {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/api/users/register", {
+      const res = await fetch("http://subbota.tech/api/users/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email.trim(),
           first_name: firstName.trim(),
           last_name: null, // Если добавишь поле для фамилии, можно передавать его сюда
-          password: password
+          password: password,
+          spec: null
         }),
       });
       
