@@ -81,19 +81,26 @@ const staggerContainer = {
   }
 };
 
+// СЛОВАРЬ ПЕРЕВОДОВ:
+const roleTranslations: Record<string, string> = {
+  customer: "заказчик",
+  student: "студент",
+  manager: "менеджер",
+  admin: "администратор",
+};
+
 export default function DashboardPage() {
   const [showAllProjects, setShowAllProjects] = useState(false);
   const { user, logout } = useAuth();
   const router = useRouter();
 
-  // Защита роута (если не авторизован - кидаем на логин)
   useEffect(() => {
     if (!user) {
       router.push("/login");
     }
   }, [user, router]);
 
-  if (!user) return null; // Не рендерим ничего, пока редиректит
+  if (!user) return null;
 
   const displayedProjects = showAllProjects ? projectsData : projectsData.slice(0, 2);
 
@@ -142,9 +149,12 @@ export default function DashboardPage() {
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">статус</p>
               <div className="bg-white/[0.03] border border-white/5 px-4 py-2.5 rounded-md w-full">
-                <span className="font-medium text-gray-200">{user.role}</span>
+                <span className="font-medium text-gray-200 capitalize">
+                  {roleTranslations[user.role] || user.role}
+                </span>
               </div>
             </div>
+
           </div>
         </motion.div>
 
