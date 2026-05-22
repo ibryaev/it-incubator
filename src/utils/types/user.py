@@ -11,6 +11,7 @@ class User:
         role: str,
         last_name: Optional[str] = None,
         bio: Optional[str] = None,
+        avatar_url: Optional[str] = None,
         spec: Optional[list[str]] = None,
         orders_created: Optional[list[int]] = None,
         orders_pinned: Optional[list[int]] = None,
@@ -22,6 +23,7 @@ class User:
         self.first_name=first_name
         self.last_name=last_name
         self.bio=bio
+        self.avatar_url=avatar_url
         self.role=role
         self.spec=spec
         self.orders_created=orders_created

@@ -8,6 +8,7 @@ class Order:
         title: str,
         techspec: str,
         status: str,
+        preview_url: Optional[str] = None,
         customer_id: Optional[int] = None,
         manager_id: Optional[int] = None,
         students_pinned: Optional[list[int]] = None,
@@ -16,6 +17,7 @@ class Order:
         self.id=id
         self.title=title
         self.techspec=techspec
+        self.preview_url=preview_url
         self.customer_id=customer_id
         self.manager_id=manager_id
         self.status=status
