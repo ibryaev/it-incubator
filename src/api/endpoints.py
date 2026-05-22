@@ -161,8 +161,8 @@ async def user_update_password(
 @router.post("/users/update/names")
 async def user_update_names(
     request: UserLogin,
-    new_first_name: str = Optional[Header(..., alias="new_fist_name")],
-    new_last_name: str = Optional[Header(..., alias="new_last_name")]
+    new_first_name: Optional[str] = Header(None, alias="new_first_name"),
+    new_last_name: Optional[str] = Header(None, alias="new_last_name")
 ) -> dict:
     """
     Обновить имя, фамилию данной учётной записи.  
@@ -187,7 +187,7 @@ async def user_update_names(
 @router.post("/users/update/bio")
 async def user_update_bio(
     request: UserLogin,
-    new_bio: str = Header(..., alias="new_bio")
+    new_bio: Optional[str] = Header(None, alias="new_bio")
 ) -> dict:
     """
     Обновить поле "О себе" данной учётной записи.  
@@ -232,7 +232,7 @@ async def user_update_avatar(
 @router.post("/users/update/spec")
 async def user_update_spec(
     request: UserLogin,
-    new_spec: list[str] = Header(..., alias="new_spec")
+    new_spec: Optional[list[str]] = Header(None, alias="new_spec")
 ) -> dict:
     """
     Обновить специальности данной учётной записи.  
