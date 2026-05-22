@@ -76,17 +76,25 @@ export default function RegisterPage() {
         throw new Error(`Ошибка сервера (${res.status}): Сервер временно недоступен`);
       }
 
+      // ОБРАБОТКА ОШИБОК БЭКЕНДА
       if (!res.ok) {
         let backendError = "Ошибка сервера";
+        
         if (data.detail) {
           if (typeof data.detail === "string") {
             backendError = data.detail;
           } else if (Array.isArray(data.detail)) {
-            backendError = data.detail[0]?.msg || "Ошибка валидации";
+            // ПРОВЕРЯЕМ: это строка (твои ошибки) или объект (ошибки FastAPI)
+            if (typeof data.detail[0] === "string") {
+              backendError = data.detail[0]; // Берем первую ошибку из твоего списка
+            } else {
+              backendError = data.detail[0]?.msg || "Ошибка валидации"; // Pydantic ошибка
+            }
           }
         } else if (data.error) {
           backendError = typeof data.error === "string" ? data.error : data.error[0];
         }
+        
         throw new Error(backendError);
       }
 
