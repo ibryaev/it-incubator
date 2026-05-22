@@ -70,8 +70,22 @@ export default function RegisterPage() {
       
       // Если бэкенд вернул ошибку
       if (!res.ok) {
-        // Достаем ошибку из ответа бэкенда (у вас возвращается {"detail": "..."} или {"error": ["..."]})
-        const backendError = data.detail?.[0] || data.detail || data.error?.[0] || "Ошибка регистрации";
+        let backendError = "Ошибка сервера";
+        
+        if (data.detail) {
+          // Если detail - это строка (например "Not Found"), берем её целиком
+          if (typeof data.detail === "string") {
+            backendError = data.detail;
+          } 
+          // Если detail - это массив (ошибки валидации Pydantic)
+          else if (Array.isArray(data.detail)) {
+            backendError = data.detail[0]?.msg || "Ошибка валидации";
+          }
+        } else if (data.error) {
+          // Твои кастомные ошибки из бэкенда
+          backendError = typeof data.error === "string" ? data.error : data.error[0];
+        }
+
         throw new Error(backendError);
       }
 
