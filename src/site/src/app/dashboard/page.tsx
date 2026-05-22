@@ -179,10 +179,21 @@ export default function DashboardPage() {
             className="group relative shrink-0 w-48 h-48 md:w-64 md:h-64 rounded-full bg-[#1A1A1E] flex items-center justify-center border border-white/5 shadow-2xl overflow-hidden cursor-pointer"
           >
             {user.avatar_url ? (
-              <img src={user.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+              <img 
+                // Добавляем /it-incubator перед ссылкой из базы данных
+                src={`/it-incubator${user.avatar_url}`} 
+                alt="avatar" 
+                className="w-full h-full object-cover"
+                // Добавим обработку ошибки, если картинка всё же не найдется
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
             ) : (
               <User className="w-24 h-24 md:w-28 md:h-28 text-[#2A2A30]" strokeWidth={1.5} />
             )}
+            
+            {/* Слой при наведении */}
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
               <Camera className="w-8 h-8 text-white" />
               <span className="text-[10px] uppercase tracking-widest font-bold">изменить фото</span>
