@@ -94,7 +94,7 @@ export default function DashboardPage() {
       const endpoint = isName ? "/api/users/update/names" : "/api/users/update/password";
       
       // В твоем бэкенде в alias указано "new_fist_name" (с опечаткой) и "new_password"
-      const headerKey = isName ? "new_fist_name" : "new_password";
+      const headerKey = isName ? "new_first_name" : "new_password";
 
       const res = await fetch(endpoint, {
         method: "POST",
