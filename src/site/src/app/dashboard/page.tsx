@@ -1,11 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/auth-provider";
+
 import { GlowingBackground } from "@/components/ui/glowing-bg";
 import { LiquidButton } from "@/components/ui/liquid-button";
-import { motion, AnimatePresence, Variants} from "framer-motion";
-import { User } from "lucide-react";
+import { motion, AnimatePresence, Variants } from "framer-motion";
+import { User, LogOut } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 
 // --- МОКОВЫЕ ДАННЫЕ ---
 const userData = {
@@ -34,7 +37,7 @@ const projectsData =[
     statusColor: "text-green-500",
     image: "/it-incubator/assets/project-placeholder-2.png",
   },
-  // Новые проекты
+  
   {
     id: 3,
     title: "Telegram-бот для заявок",
@@ -79,10 +82,19 @@ const staggerContainer = {
 };
 
 export default function DashboardPage() {
-  // Состояние для кнопки "Ещё / Скрыть"
   const [showAllProjects, setShowAllProjects] = useState(false);
-  
-  // Определяем, какие проекты показывать
+  const { user, logout } = useAuth();
+  const router = useRouter();
+
+  // Защита роута (если не авторизован - кидаем на логин)
+  useEffect(() => {
+    if (!user) {
+      router.push("/login");
+    }
+  }, [user, router]);
+
+  if (!user) return null; // Не рендерим ничего, пока редиректит
+
   const displayedProjects = showAllProjects ? projectsData : projectsData.slice(0, 2);
 
   return (
@@ -104,47 +116,33 @@ export default function DashboardPage() {
         </motion.h1>
 
         {/* БЛОК ПРОФИЛЯ */}
-        <motion.div
-          variants={fadeInUp}
-          // Убрали md:items-start. Теперь items-center работает для всех экранов, ровняя контент строго по центру по вертикали
-          className="w-full flex flex-col md:flex-row items-center justify-start gap-12 md:gap-24 lg:gap-32 mb-32"
-        >
-          {/* Аватар */}
+        <motion.div variants={fadeInUp} className="w-full flex flex-col md:flex-row items-center justify-start gap-12 md:gap-24 lg:gap-32 mb-32 relative">
+          
+          <button onClick={logout} className="absolute top-0 right-0 text-gray-400 hover:text-red-400 flex items-center gap-2 transition-colors">
+            <LogOut size={18} /> Выйти
+          </button>
+
           <div className="shrink-0 w-48 h-48 md:w-64 md:h-64 rounded-full bg-[#1A1A1E] flex items-center justify-center border border-white/5 shadow-2xl">
             <User className="w-24 h-24 md:w-28 md:h-28 text-[#2A2A30]" strokeWidth={1.5} />
           </div>
 
-          {/* Информация о пользователе (центрируется напротив аватара) */}
           <div className="w-full max-w-md space-y-6">
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">логин</p>
-              <h2 className="text-3xl font-semibold">{userData.login}</h2>
+              <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">имя</p>
+              <h2 className="text-3xl font-semibold">{user.first_name} {user.last_name || ""}</h2>
             </div>
 
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">почта</p>
               <div className="bg-white/[0.03] border border-white/5 px-4 py-2.5 rounded-md w-full">
-                <span className="font-medium text-gray-200">{userData.email}</span>
+                <span className="font-medium text-gray-200">{user.email}</span>
               </div>
-              <button className="text-xs text-gray-400 mt-1.5 border-b border-gray-500 hover:text-white transition-colors">
-                сменить почту
-              </button>
-            </div>
-
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">пароль</p>
-              <div className="bg-white/[0.03] border border-white/5 px-4 py-2.5 rounded-md w-full">
-                <span className="font-medium tracking-[0.3em] text-gray-200">{userData.password}</span>
-              </div>
-              <button className="text-xs text-gray-400 mt-1.5 border-b border-gray-500 hover:text-white transition-colors">
-                сменить пароль
-              </button>
             </div>
 
             <div>
               <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">статус</p>
               <div className="bg-white/[0.03] border border-white/5 px-4 py-2.5 rounded-md w-full">
-                <span className="font-medium text-gray-200">{userData.status}</span>
+                <span className="font-medium text-gray-200">{user.role}</span>
               </div>
             </div>
           </div>

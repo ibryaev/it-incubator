@@ -1,5 +1,9 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/auth-provider";
+
 import { GlowingBackground } from "@/components/ui/glowing-bg";
 import { LiquidButton } from "@/components/ui/liquid-button";
 import { GlassInput } from "@/components/ui/glass-input";
@@ -31,56 +35,73 @@ const staggerContainer: Variants = {
 };
 
 export default function NewProjectPage() {
+  const [title, setTitle] = useState("");
+  const [productType, setProductType] = useState("");
+  const [budget, setBudget] = useState("");
+  const [description, setDescription] = useState("");
+  
+  const { user } = useAuth();
+  const router = useRouter();
+
+  const handleSubmit = async () => {
+    // Формируем techspec согласно твоим требованиям
+    const techspec = `Описание:\nТип продукта: ${productType || "Не указан"}\nОриентировочный бюджет и сроки: ${budget || "Не указаны"}\nКраткое описание: ${description || "Не указано"}`;
+
+    const payload = {
+      title,
+      techspec,
+      customer_id: user?.id,
+    };
+
+    console.log("Готово к отправке на сервер:", payload);
+
+    // TODO: Здесь будет запрос к бэкенду, когда напишешь эндпоинт POST /orders/create
+    // await fetch("http://localhost:8000/orders/create", {
+    //   method: "POST",
+    //   headers: { "Content-Type": "application/json" },
+    //   body: JSON.stringify(payload)
+    // });
+
+    alert("Заявка успешно сформирована! (Пока мок, см. console.log)");
+    router.push("/dashboard");
+  };
+
   return (
     <main className="relative min-h-screen text-white overflow-hidden flex flex-col">
       <GlowingBackground />
 
       <section className="flex-1 flex flex-col items-center justify-center px-6 pt-20 pb-20">
-        <motion.div 
-          initial="hidden"
-          animate="visible"
-          variants={staggerContainer}
-          className="w-full max-w-lg space-y-10 relative z-10" // Сделал max-w-lg (чуть шире), так как это форма заявки
-        >
-          {/* Заголовок */}
+        <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="w-full max-w-lg space-y-10 relative z-10">
+          
           <motion.div variants={fadeInUp} className="text-center space-y-3">
-            <h1 className="text-4xl md:text-5xl font-medium tracking-tight">
-              Новая заявка
-            </h1>
-            <p className="text-gray-400 text-sm md:text-base">
-              Опишите вашу идею, и мы свяжемся с вами для обсуждения деталей.
-            </p>
+            <h1 className="text-4xl md:text-5xl font-medium tracking-tight">Новая заявка</h1>
+            <p className="text-gray-400 text-sm md:text-base">Опишите вашу идею, и мы свяжемся с вами для обсуждения деталей.</p>
           </motion.div>
 
-          {/* Список инпутов */}
           <motion.div variants={fadeInUp} className="space-y-4">
-            <GlassInput type="text" placeholder="Название проекта (например, 'Бот для магазина')" />
-            <GlassInput type="text" placeholder="Тип продукта (Сайт, Приложение, Telegram-бот)" />
-            <GlassInput type="text" placeholder="Ориентировочный бюджет или сроки (опционально)" />
+            <GlassInput type="text" placeholder="Название проекта" value={title} onChange={e => setTitle(e.target.value)} />
+            <GlassInput type="text" placeholder="Тип продукта (Сайт, Приложение, Telegram-бот)" value={productType} onChange={e => setProductType(e.target.value)} />
+            <GlassInput type="text" placeholder="Ориентировочный бюджет или сроки" value={budget} onChange={e => setBudget(e.target.value)} />
             
-            {/* Большое поле для текста, стилизованное под GlassInput */}
             <textarea 
               placeholder="Краткое описание задачи..."
+              value={description}
+              onChange={e => setDescription(e.target.value)}
               className="w-full px-6 py-4 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 focus:bg-white/[0.05] backdrop-blur-md transition-all duration-300 resize-none h-32"
             />
           </motion.div>
 
-          {/* Действия */}
-          <motion.div 
-            variants={fadeInUp}
-            className="flex flex-col sm:flex-row items-center justify-between gap-6"
-          >
-            <Link 
-              href="/dashboard" 
-              className="text-sm text-gray-400 hover:text-white transition-colors border-b border-gray-400/30 hover:border-white order-2 sm:order-1"
-            >
+          <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-center justify-between gap-6">
+            <Link href="/dashboard" className="text-sm text-gray-400 hover:text-white transition-colors border-b border-gray-400/30 hover:border-white order-2 sm:order-1">
               Отмена
             </Link>
             
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full sm:w-auto order-1 sm:order-2">
-              <LiquidButton className="w-full px-8 py-3 text-[11px] uppercase tracking-wider">
-                Отправить заявку
-              </LiquidButton>
+              <div onClick={handleSubmit}>
+                <LiquidButton className="w-full px-8 py-3 text-[11px] uppercase tracking-wider cursor-pointer">
+                  Отправить заявку
+                </LiquidButton>
+              </div>
             </motion.div>
           </motion.div>
 
@@ -100,4 +121,4 @@ export default function NewProjectPage() {
       </section>
     </main>
   );
-}
+}      
