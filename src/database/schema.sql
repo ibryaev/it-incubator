@@ -14,12 +14,13 @@ END $$;
 
 
 CREATE TABLE IF NOT EXISTS users (                      -- Таблица с учётными записями
-    id SERIAL PRIMARY KEY,                              -- Уникальный ID (user_id, uid). Просто SERIAL
+    id SERIAL PRIMARY KEY,                              -- Уникальный ID (user_id, uid)
     email TEXT NOT NULL,                                -- Электронная почта учётной записи
     password_hash TEXT NOT NULL,                        -- Зашифрованный пароль от учётной записи
     first_name VARCHAR(64) NOT NULL,                    -- Имя пользователя
     last_name VARCHAR(64) DEFAULT NULL,                 -- Фамилия
     bio VARCHAR(384) DEFAULT NULL,                      -- Краткое описание человека
+    avatar_url TEXT DEFAULT NULL,                       -- URL фото профиля
     "role" user_role_type NOT NULL DEFAULT 'customer',  -- Роль человека в системе: заказчик, студент (исполнитель), преподаватель (менеджер), админ
     spec user_spec_type[] DEFAULT '{}',                 -- Спецификация человека, как и требовалось в ТЗ
     orders_created INTEGER[] DEFAULT '{}',              -- Массив orders(id), созданных этим человеком
@@ -29,11 +30,12 @@ CREATE TABLE IF NOT EXISTS users (                      -- Таблица с у�
 );
 
 CREATE TABLE IF NOT EXISTS orders (                                             -- Таблица с заказами
-    id SERIAL PRIMARY KEY,                                                      -- Уникальный ID (order_id, oid). Просто SERIAL
-    title VARCHAR(192) NOT NULL,                                                -- Название проекта. ОБЯЗАТЕЛЬНАЯ КОЛОНКА
-    techspec TEXT NOT NULL,                                                     -- Описание (техническое задание). ОБЯЗАТЕЛЬНАЯ КОЛОНКА
+    id SERIAL PRIMARY KEY,                                                      -- Уникальный ID (order_id, oid)
+    title VARCHAR(192) NOT NULL,                                                -- Название проекта
+    techspec TEXT NOT NULL,                                                     -- Описание (техническое задание)
+    preview_url TEXT NOT NULL,                                                  -- Превью проекта
     "status" order_status_type NOT NULL DEFAULT 'created',                      -- Статус заказа: создан, взят в работу, тестируется, готов, отменён
-    customer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,        -- users(id) пользователя, который создал заказ. ОБЯЗАТЕЛЬНАЯ КОЛОНКА
+    customer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,        -- users(id) пользователя, который создал заказ
     manager_id INTEGER DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,    -- users(id) менеджера, который взял заказ
     students_pinned INTEGER[] DEFAULT '{}',                                     -- Массив всех users(id), которые закреплены за этим проектом как исполнители
     date_reg TIMESTAMPTZ NOT NULL DEFAULT NOW()                                 -- Дата создания в виде UNIX timestamp
