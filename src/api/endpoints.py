@@ -51,7 +51,7 @@ async def user_register(
         raise HTTPException(403, user['error'])
     return user
 
-@router.get("/users/login")
+@router.post("/users/login")
 async def user_login(
     request: UserLogin
 ) -> dict:
