@@ -60,36 +60,37 @@ export default function RegisterPage() {
         body: JSON.stringify({
           email: email.trim(),
           first_name: firstName.trim(),
-          last_name: null, // Если добавишь поле для фамилии, можно передавать его сюда
+          last_name: null,
           password: password,
           spec: null
         }),
       });
       
-      const data = await res.json();
-      
-      // Если бэкенд вернул ошибку
+      // БЕЗОПАСНЫЙ ПАРСИНГ JSON
+      let data;
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        // Если пришел не JSON (например, 503 HTML страница от Nginx)
+        throw new Error(`Ошибка сервера (${res.status}): Сервер временно недоступен`);
+      }
+
       if (!res.ok) {
         let backendError = "Ошибка сервера";
-        
         if (data.detail) {
-          // Если detail - это строка (например "Not Found"), берем её целиком
           if (typeof data.detail === "string") {
             backendError = data.detail;
-          } 
-          // Если detail - это массив (ошибки валидации Pydantic)
-          else if (Array.isArray(data.detail)) {
+          } else if (Array.isArray(data.detail)) {
             backendError = data.detail[0]?.msg || "Ошибка валидации";
           }
         } else if (data.error) {
-          // Твои кастомные ошибки из бэкенда
           backendError = typeof data.error === "string" ? data.error : data.error[0];
         }
-
         throw new Error(backendError);
       }
 
-      // Если всё успешно, логиним пользователя и перекидываем в кабинет
+      // Успех!
       login({ ...data, passwordRaw: password });
       router.push("/dashboard");
       

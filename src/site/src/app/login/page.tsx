@@ -29,45 +29,51 @@ export default function LoginPage() {
   const { login } = useAuth();
 
   const handleLogin = async () => {
-    setError(""); // Очищаем предыдущую ошибку
+    setError(""); // Очищаем предыдущие ошибки перед новым запросом
     
+    // Базовая проверка, чтобы не отправлять пустые поля
     if (!email || !password) {
-      return setError("Пожалуйста, введите почту и пароль");
+      return setError("Пожалуйста, заполните почту и пароль");
     }
 
     try {
+      // 1. Изменен URL на login
       const res = await fetch("https://subbota.tech/api/users/login", {
-        method: "POST", 
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          email: email.trim(), 
-          password: password 
+        // 2. В теле передаем только то, что ждет UserLogin (email и password)
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password
         }),
       });
       
-      const data = await res.json();
-      
+      // БЕЗОПАСНЫЙ ПАРСИНГ JSON
+      let data;
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        // Если пришел не JSON (например, 503 HTML страница от Nginx)
+        throw new Error(`Ошибка сервера (${res.status}): Сервер временно недоступен`);
+      }
+
+      // ОБРАБОТКА ОШИБОК БЭКЕНДА
       if (!res.ok) {
         let backendError = "Ошибка сервера";
-        
         if (data.detail) {
-          // Если detail - это строка (например "Not Found" или "Неверный логин"), берем её целиком
           if (typeof data.detail === "string") {
             backendError = data.detail;
-          } 
-          // Если detail - это массив (ошибки валидации Pydantic от FastAPI)
-          else if (Array.isArray(data.detail)) {
+          } else if (Array.isArray(data.detail)) {
             backendError = data.detail[0]?.msg || "Ошибка валидации";
           }
         } else if (data.error) {
-          // Твои кастомные ошибки из словарей бэкенда
           backendError = typeof data.error === "string" ? data.error : data.error[0];
         }
-
         throw new Error(backendError);
       }
 
-      // Сохраняем пользователя в контекст
+      // Успех!
       login({ ...data, passwordRaw: password });
       router.push("/dashboard");
       
