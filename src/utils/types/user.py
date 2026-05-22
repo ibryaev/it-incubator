@@ -1,4 +1,3 @@
-#from utils import user_role, user_spec
 from datetime import datetime
 from typing import Optional
 
@@ -9,9 +8,9 @@ class User:
         email: str,
         password_hash: str,
         first_name: str,
+        role: str,
         last_name: Optional[str] = None,
         bio: Optional[str] = None,
-        role: Optional[str] = None,
         spec: Optional[list[str]] = None,
         orders_created: Optional[list[int]] = None,
         orders_pinned: Optional[list[int]] = None,
