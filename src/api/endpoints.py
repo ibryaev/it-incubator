@@ -142,7 +142,7 @@ async def user_update_names(
     return result
 
 @router.post("/users/update/bio")
-async def user_update_password(
+async def user_update_bio(
     request: UserLogin,
     new_bio: str = Header(..., alias="new_bio")
 ) -> dict:
@@ -159,7 +159,7 @@ async def user_update_password(
     return result
 
 @router.post("/users/update/spec")
-async def user_update_password(
+async def user_update_spec(
     request: UserLogin,
     new_spec: list[str] = Header(..., alias="new_spec")
 ) -> dict:
@@ -170,7 +170,7 @@ async def user_update_password(
     user = await methods.login_account(**request)
     if "error" in user:
         raise HTTPException(403, user['error'])
-    result = await methods.update_account_spec(user['id'], new_spec)
+    result = await methods.update_account_spec(user['id'], new_spec, True)
     if "error" in result:
         raise HTTPException(403, user['error'])
     return result
