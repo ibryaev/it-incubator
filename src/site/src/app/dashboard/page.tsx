@@ -6,13 +6,24 @@ import { useAuth } from "@/app/auth-provider";
 
 import { GlowingBackground } from "@/components/ui/glowing-bg";
 import { LiquidButton } from "@/components/ui/liquid-button";
-import { GlassInput } from "@/components/ui/glass-input";
 import { motion, AnimatePresence, Variants } from "framer-motion";
-import { User, LogOut, Camera, Pencil, Check, X } from "lucide-react";
+import { 
+  User, LogOut, Camera, Pencil, Check, X, 
+  Eye, EyeOff 
+} from "lucide-react";
 import Link from "next/link";
 
+// --- ТИПЫ ---
+interface Project {
+  id: number;
+  title: string;
+  description: string;
+  status: string;
+  statusColor: string;
+}
+
 // --- МОКОВЫЕ ДАННЫЕ ПРОЕКТОВ ---
-const projectsData = [
+const projectsData: Project[] = [
   {
     id: 1,
     title: "Сайт дачного поселка",
@@ -55,10 +66,10 @@ const staggerContainer = {
 };
 
 const roleTranslations: Record<string, string> = {
-  customer: "заказчик",
-  student: "студент",
-  manager: "менеджер",
-  admin: "администратор",
+  customer: "Заказчик",
+  student: "Студент",
+  manager: "Менеджер",
+  admin: "Администратор",
 };
 
 export default function DashboardPage() {
@@ -66,14 +77,15 @@ export default function DashboardPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Состояния для проектов
+  // Состояния для управления списком проектов
   const [showAllProjects, setShowAllProjects] = useState(false);
-  
-  // Состояния для редактирования профиля
-  const [editMode, setEditMode] = useState<null | "name" | "password">(null);
-  const [editValue, setEditValue] = useState("");
-  const [error, setError] = useState("");
+
+  // Состояния редактирования профиля
+  const [editTarget, setEditTarget] = useState<null | "name" | "email" | "password">(null);
+  const [tempValue, setTempValue] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!user) router.push("/login");
@@ -83,47 +95,50 @@ export default function DashboardPage() {
 
   const displayedProjects = showAllProjects ? projectsData : projectsData.slice(0, 2);
 
-  // Функция для безопасного запроса к API
-  const handleProfileUpdate = async () => {
-    if (!editValue.trim()) return setEditMode(null);
-    setIsUpdating(true);
+  const handleStartEdit = (target: "name" | "email" | "password", currentVal: string) => {
+    setEditTarget(target);
+    setTempValue(target === "password" ? "" : currentVal);
     setError("");
+  };
 
+  const handleSave = async () => {
+    if (!tempValue.trim() && editTarget !== "password") return setEditTarget(null);
+    setIsUpdating(true);
+    
     try {
-      const isName = editMode === "name";
-      const endpoint = isName ? "/api/users/update/names" : "/api/users/update/password";
-      
-      // В твоем бэкенде в alias указано "new_fist_name" (с опечаткой) и "new_password"
-      const headerKey = isName ? "new_first_name" : "new_password";
+      let endpoint = "";
+      let headerKey = "";
+
+      if (editTarget === "name") {
+        endpoint = "/api/users/update/names";
+        headerKey = "new_fist_name";
+      } else if (editTarget === "email") {
+        endpoint = "/api/users/update/email";
+        headerKey = "new_email";
+      } else {
+        endpoint = "/api/users/update/password";
+        headerKey = "new_password";
+      }
 
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          [headerKey]: editValue.trim()
+          [headerKey]: tempValue.trim()
         },
-        // Большинство твоих методов обновления требуют UserLogin в теле для проверки
-        body: JSON.stringify({
-          email: user.email,
-          password: user.passwordRaw // Берем из контекста сохраненный при входе пароль
-        }),
+        body: JSON.stringify({ email: user.email, password: user.passwordRaw }),
       });
 
       const data = await res.json();
+      if (!res.ok) throw new Error(data.detail?.[0] || data.detail || "Ошибка");
 
-      if (!res.ok) {
-        throw new Error(data.detail?.[0] || data.detail || "Ошибка обновления");
-      }
-
-      // Обновляем данные в контексте (чтобы Header и Dashboard сразу увидели изменения)
-      if (isName) {
-        login({ ...user, first_name: editValue.trim() });
-      } else {
-        login({ ...user, passwordRaw: editValue.trim() });
-      }
-
-      setEditMode(null);
-      setEditValue("");
+      const updatedUser = { ...user };
+      if (editTarget === "name") updatedUser.first_name = tempValue;
+      if (editTarget === "email") updatedUser.email = tempValue;
+      if (editTarget === "password") updatedUser.passwordRaw = tempValue;
+      
+      login(updatedUser);
+      setEditTarget(null);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -131,25 +146,60 @@ export default function DashboardPage() {
     }
   };
 
-  // Логика загрузки аватарки
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const ProfileField = ({ 
+    label, 
+    value, 
+    target, 
+    isPassword = false 
+  }: { 
+    label: string; 
+    value: string; 
+    target: "name" | "email" | "password";
+    isPassword?: boolean;
+  }) => {
+    const isEditing = editTarget === target;
 
-    const formData = new FormData();
-    formData.append("file", file);
+    return (
+      <div className="w-full">
+        <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] mb-2 ml-1">{label}</p>
+        <div className={`
+          relative w-full flex items-center rounded-xl transition-all duration-300
+          bg-white/[0.03] border backdrop-blur-md px-5 py-3.5
+          ${isEditing ? "border-white/20 bg-white/[0.06]" : "border-white/10"}
+        `}>
+          <input
+            type={isPassword && !showPassword ? "password" : "text"}
+            value={isEditing ? tempValue : (isPassword ? "********" : value)}
+            readOnly={!isEditing}
+            onChange={(e) => setTempValue(e.target.value)}
+            className="flex-1 bg-transparent border-none outline-none text-white placeholder:text-gray-600 text-sm md:text-base"
+          />
+          
+          <div className="flex items-center gap-3 ml-2">
+            {isPassword && (
+              <button onClick={() => setShowPassword(!showPassword)} className="text-gray-500 hover:text-white transition-colors">
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            )}
 
-    try {
-      const res = await fetch("/api/users/update/avatar", {
-        method: "POST",
-        headers: { "user_id": String(user.id) },
-        body: formData
-      });
-      const data = await res.json();
-      if (res.ok) login({ ...user, avatar_url: data.avatar_url });
-    } catch (err) {
-      console.error("Ошибка загрузки фото", err);
-    }
+            {isEditing ? (
+              <>
+                <button onClick={handleSave} className="text-green-400 hover:scale-110 transition-transform">
+                  <Check size={20} />
+                </button>
+                <button onClick={() => setEditTarget(null)} className="text-red-400 hover:scale-110 transition-transform">
+                  <X size={20} />
+                </button>
+              </>
+            ) : (
+              <button onClick={() => handleStartEdit(target, value)} className="text-gray-500 hover:text-white transition-colors">
+                <Pencil size={16} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -157,113 +207,51 @@ export default function DashboardPage() {
       <GlowingBackground />
 
       <motion.section
-        initial="hidden"
-        animate="visible"
-        variants={staggerContainer}
+        initial="hidden" animate="visible" variants={staggerContainer}
         className="relative z-10 w-full max-w-5xl mx-auto px-6 pt-32"
       >
-        <motion.h1 variants={fadeInUp} className="text-4xl md:text-5xl font-medium text-center mb-16 tracking-tight">
+        <motion.h1 variants={fadeInUp} className="text-4xl md:text-5xl font-medium text-center mb-20 tracking-tight">
           Личный кабинет
         </motion.h1>
 
-        {/* БЛОК ПРОФИЛЯ */}
-        <motion.div variants={fadeInUp} className="w-full flex flex-col md:flex-row items-center justify-start gap-12 md:gap-24 lg:gap-32 mb-32 relative">
+        <motion.div variants={fadeInUp} className="flex flex-col md:flex-row items-center justify-start gap-12 md:gap-20 mb-28 relative">
           
-          <button onClick={logout} className="absolute top-0 right-0 text-gray-500 hover:text-red-400 flex items-center gap-2 transition-colors text-sm font-medium">
-            <LogOut size={16} /> Выйти
+          <button onClick={logout} className="absolute -top-10 right-0 text-gray-500 hover:text-red-400 flex items-center gap-2 transition-colors text-xs uppercase tracking-widest">
+            <LogOut size={14} /> Выйти
           </button>
 
-          {/* АВАТАРКА */}
           <div 
             onClick={() => fileInputRef.current?.click()}
-            className="group relative shrink-0 w-48 h-48 md:w-64 md:h-64 rounded-full bg-[#1A1A1E] flex items-center justify-center border border-white/5 shadow-2xl overflow-hidden cursor-pointer"
+            className="group relative shrink-0 w-48 h-48 md:w-56 md:h-56 rounded-full bg-[#1A1A1E] flex items-center justify-center border border-white/5 shadow-2xl overflow-hidden cursor-pointer"
           >
             {user.avatar_url ? (
-              <img 
-                // Добавляем /it-incubator перед ссылкой из базы данных
-                src={`/it-incubator${user.avatar_url}`} 
-                alt="avatar" 
-                className="w-full h-full object-cover"
-                // Добавим обработку ошибки, если картинка всё же не найдется
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
+              <img src={`/it-incubator${user.avatar_url}`} alt="avatar" className="w-full h-full object-cover" />
             ) : (
-              <User className="w-24 h-24 md:w-28 md:h-28 text-[#2A2A30]" strokeWidth={1.5} />
+              <User className="w-20 h-20 text-[#2A2A30]" strokeWidth={1} />
             )}
-            
-            {/* Слой при наведении */}
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-              <Camera className="w-8 h-8 text-white" />
-              <span className="text-[10px] uppercase tracking-widest font-bold">изменить фото</span>
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+              <Camera className="w-6 h-6 text-white" />
+              <span className="text-[9px] uppercase tracking-widest font-bold">Изменить</span>
             </div>
-            <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleAvatarChange} />
+            <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={async (e) => {
+              const file = e.target.files?.[0]; if (!file) return;
+              const formData = new FormData(); formData.append("file", file);
+              const res = await fetch("/api/users/update/avatar", { method: "POST", headers: { "user_id": String(user.id) }, body: formData });
+              const data = await res.json(); if (res.ok) login({ ...user, avatar_url: data.avatar_url });
+            }} />
           </div>
 
-          {/* ИНФО */}
-          <div className="w-full max-w-md space-y-6">
-            {/* ИМЯ */}
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">имя</p>
-              {editMode === "name" ? (
-                <div className="flex gap-2">
-                  <GlassInput value={editValue} onChange={e => setEditValue(e.target.value)} placeholder="Новое имя" autoFocus />
-                  <button onClick={handleProfileUpdate} disabled={isUpdating} className="p-3 bg-white/5 hover:bg-green-500/20 rounded-xl transition-colors border border-white/5 text-green-400">
-                    <Check size={20} />
-                  </button>
-                  <button onClick={() => setEditMode(null)} className="p-3 bg-white/5 hover:bg-red-500/20 rounded-xl transition-colors border border-white/5 text-red-400">
-                    <X size={20} />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <h2 className="text-3xl font-semibold">{user.first_name} {user.last_name || ""}</h2>
-                  <button onClick={() => { setEditMode("name"); setEditValue(user.first_name); }} className="text-gray-500 hover:text-white transition-colors">
-                    <Pencil size={16} />
-                  </button>
-                </div>
-              )}
-            </div>
+          <div className="w-full max-w-lg space-y-5">
+            <ProfileField label="Имя" value={user.first_name} target="name" />
+            <ProfileField label="Электронная почта" value={user.email} target="email" />
+            <ProfileField label="Пароль" value="********" target="password" isPassword />
+            
+            {error && <p className="text-red-400 text-[11px] italic ml-1">{error}</p>}
 
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">почта</p>
-              <div className="bg-white/[0.03] border border-white/5 px-4 py-2.5 rounded-md w-full">
-                <span className="font-medium text-gray-200 opacity-60">{user.email}</span>
-              </div>
-            </div>
-
-            {/* ПАРОЛЬ */}
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">пароль</p>
-              {editMode === "password" ? (
-                <div className="flex gap-2">
-                  <GlassInput type="password" value={editValue} onChange={e => setEditValue(e.target.value)} placeholder="Новый пароль" autoFocus />
-                  <button onClick={handleProfileUpdate} disabled={isUpdating} className="p-3 bg-white/5 hover:bg-green-500/20 rounded-xl transition-colors border border-white/5 text-green-400">
-                    <Check size={20} />
-                  </button>
-                  <button onClick={() => setEditMode(null)} className="p-3 bg-white/5 hover:bg-red-500/20 rounded-xl transition-colors border border-white/5 text-red-400">
-                    <X size={20} />
-                  </button>
-                </div>
-              ) : (
-                <button 
-                  onClick={() => { setEditMode("password"); setEditValue(""); }}
-                  className="text-sm text-gray-400 hover:text-white border-b border-gray-600 hover:border-white transition-all pb-0.5"
-                >
-                  сменить пароль
-                </button>
-              )}
-            </div>
-
-            {error && <p className="text-red-400 text-xs italic">{error}</p>}
-
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">статус</p>
-              <div className="bg-white/[0.03] border border-white/5 px-4 py-2.5 rounded-md w-full">
-                <span className="font-medium text-gray-200 capitalize">
-                  {roleTranslations[user.role] || user.role}
-                </span>
+            <div className="pt-2">
+              <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] mb-2 ml-1">Статус</p>
+              <div className="w-full px-5 py-3.5 rounded-xl bg-white/[0.01] border border-white/[0.05] text-gray-400 text-sm">
+                {roleTranslations[user.role] || user.role}
               </div>
             </div>
           </div>
@@ -272,7 +260,7 @@ export default function DashboardPage() {
         {/* БЛОК ПРОЕКТОВ */}
         <motion.div variants={fadeInUp} className="w-full">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-10 gap-6">
-            <h2 className="text-3xl md:text-4xl font-medium tracking-tight">Мои проекты</h2>
+            <h2 className="text-2xl md:text-3xl font-medium tracking-tight">Мои проекты</h2>
             <Link href="/new-project">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <LiquidButton className="px-8 py-3 text-sm font-semibold uppercase tracking-wider">
@@ -284,7 +272,7 @@ export default function DashboardPage() {
 
           <motion.div layout className="space-y-6 w-full">
             <AnimatePresence>
-              {displayedProjects.map((project) => (
+              {displayedProjects.map((project: Project) => (
                 <motion.div
                   layout
                   key={project.id}
