@@ -92,7 +92,7 @@ class DbQuery():
 
                 await cur.execute(
                     """
-                    INSERT INTO users (email, password, first_name, last_name, role, spec)
+                    INSERT INTO users (email, password_hash, first_name, last_name, role, spec)
                     VALUES (%s, %s, %s, %s, %s, %s)
                     RETURNING *
                     """,

@@ -79,7 +79,14 @@ async def register_account(
     if errors:
         return {"error": errors}
 
-    new_user, err = await db.user_create(first_name, last_name, role, spec)
+    new_user, err = await db.user_create(
+        email,
+        password,
+        first_name,
+        last_name,
+        role,
+        spec
+    )
     if err:
         return {"error": [err]}
     return dict(vars(new_user))
@@ -109,7 +116,10 @@ async def login_account(
     if len(password) < PASSWORD_MIN_LEN:
         return {"error": "Пароль слишком короткий"}
 
-    user, err = await db.user_read(email=email, password_hash=password)
+    user, err = await db.user_read(
+        email=email,
+        password_hash=password
+    )
     if err:
         return {"error": [err]}
     return dict(vars(user))
@@ -190,7 +200,10 @@ async def update_account_email(
     if new_email.endswith(tuple(EMAIL_RESTRICTED_DOMAINS)):
         return {"error": "Недопустимая почта"}
 
-    user, err = await db.user_update(user_id, email=new_email)
+    user, err = await db.user_update(
+        user_id,
+        email=new_email
+    )
     if err:
         return {"error": [err]}
     return dict(vars(user))
@@ -217,7 +230,10 @@ async def update_account_password(
     if new_password in (user.email, user.first_name, user.last_name, user.full_name):
         return {"error": "Слишком небезопасный пароль"}
 
-    user, err = await db.user_update(user_id, password_hash=new_password)
+    user, err = await db.user_update(
+        user_id,
+        password_hash=new_password
+    )
     if err:
         return {"error": [err]}
     return dict(vars(user))
@@ -258,9 +274,18 @@ async def update_account_names(
         return {"error": errors}
 
     if new_first_name:
-        user, err = await db.user_update(user_id, True, first_name=new_first_name, last_name=new_last_name)
+        user, err = await db.user_update(
+            user_id,
+            True,
+            first_name=new_first_name,
+            last_name=new_last_name
+        )
     else:
-        user, err = await db.user_update(user_id, True, last_name=new_last_name)
+        user, err = await db.user_update(
+            user_id,
+            True,
+            last_name=new_last_name
+        )
     if err:
         return {"error": [err]}
     return dict(vars(user))
@@ -283,7 +308,11 @@ async def update_account_bio(
         if new_bio and len(new_bio) > BIO_MAX_LEN:
             return {"error": "Описание слишком длинное"}
 
-    updated_user, err = await db.user_update(user_id, True, bio=new_bio)
+    updated_user, err = await db.user_update(
+        user_id,
+        True,
+        bio=new_bio
+    )
     if err:
         return {"error": [err]}
     return dict(vars(updated_user))
@@ -325,7 +354,11 @@ async def update_account_spec(
                 pass
             spec = set(spec)
 
-    updated_user, err = await db.user_update(user_id, True, spec=spec)
+    updated_user, err = await db.user_update(
+        user_id,
+        True,
+        spec=spec
+    )
     if err:
         return {"error": [err]}
     return dict(vars(updated_user))
