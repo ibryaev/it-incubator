@@ -1,6 +1,10 @@
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, UploadFile, File
+
 from pydantic import BaseModel, Field
 from typing import Optional
+
+import shutil
+import os
 from datetime import datetime
 
 from config import *
@@ -127,7 +131,7 @@ async def user_update_email(
         new_email
     )
     if "error" in result:
-        raise HTTPException(403, user['error'])
+        raise HTTPException(403, result['error'])
     return result
 
 @router.post("/users/update/password")
@@ -151,7 +155,7 @@ async def user_update_password(
         new_password
     )
     if "error" in result:
-        raise HTTPException(403, user['error'])
+        raise HTTPException(403, result['error'])
     return result
 
 @router.post("/users/update/names")
@@ -177,7 +181,7 @@ async def user_update_names(
         new_last_name
     )
     if "error" in result:
-        raise HTTPException(403, user['error'])
+        raise HTTPException(403, result['error'])
     return result
 
 @router.post("/users/update/bio")
@@ -201,8 +205,29 @@ async def user_update_bio(
         new_bio
     )
     if "error" in result:
-        raise HTTPException(403, user['error'])
+        raise HTTPException(403, result['error'])
     return result
+
+@router.post("/users/update/avatar")
+async def user_update_avatar(
+    user_id: int = Header(..., alias="user_id"),
+    file: Optional[UploadFile] = File(...)
+):
+    os.makedirs("src/site/public/avatars", exist_ok=True)
+    file_path = f"src/site/public/avatars/user_{user_id}.jpg"
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    url = f"/avatars/user_{user_id}.jpg"
+
+    user, err = await db.user_update(
+        user_id,
+        avatar_url=url
+    )
+    if err:
+        return {"error": err}
+    return dict(vars(user))
 
 @router.post("/users/update/spec")
 async def user_update_spec(
@@ -226,7 +251,7 @@ async def user_update_spec(
         True
     )
     if "error" in result:
-        raise HTTPException(403, user['error'])
+        raise HTTPException(403, result['error'])
     return result
 
 @router.delete("/users/delete")

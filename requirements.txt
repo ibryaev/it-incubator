@@ -5,3 +5,4 @@ aiohttp-socks
 python-dotenv
 fastapi
 uvicorn
+python-multipart
