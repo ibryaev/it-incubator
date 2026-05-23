@@ -14,10 +14,10 @@ API_PROTOCOL=getenv("API_PROTOCOL", "http")
 
 db = database.DbQuery()
 
-EMAIL_RESTRICTED_DOMAINS = [
+EMAIL_RESTRICTED_DOMAINS = (
     "mozmail.com",
     "10minutemail.com"
-]
+)
 PASSWORD_MIN_LEN = 4        # По умолчанию 4
 FIRST_NAME_MAX_LEN = 64     # По умолчанию 64
 LAST_NAME_MAX_LEN = 64      # По умолчанию 64

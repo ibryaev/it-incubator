@@ -1,6 +1,5 @@
 from typing import Optional
-# from utils.types import User, Order
-from utils import user_role_type, user_spec_type, order_status_type
+from utils import user_role_type, user_spec_type
 from database import *
 from config import *
 
@@ -23,19 +22,19 @@ async def register_account(
     :param spec: Список специализаций пользователя. Исходя из списка :data:`src.utils.utils.user_spec_type`.
     :return: В случае успеха возвращает словарь с данными пользователя. Иначе: :code:`{"error": [ошибк(а/и)]}`.
     """
-    errors = []
+    errors: list[str] = []
 
     email = email.strip()
     if not email:
         errors.append("Эл. почта должна быть заполнена")
     if not "@" in email or not "." in email:
         errors.append("Неккоректная эл. почта")
-    if email.endswith(tuple(EMAIL_RESTRICTED_DOMAINS)):
+    if email.endswith(EMAIL_RESTRICTED_DOMAINS):
         errors.append("Недопустимая почта")
 
     first_name = first_name.strip()
     if not first_name:
-        errors.append("Дано пустое имя")
+        errors.append("Пустое имя")
     if len(first_name) > FIRST_NAME_MAX_LEN:
         errors.append("Слишком длинное имя")
 
@@ -57,9 +56,9 @@ async def register_account(
     if role:
         role = role.strip()
         if not role:
-            errors.append("Дана пустая роль")
+            errors.append("Пустая роль")
         if role not in user_role_type:
-            errors.append(f"Дана неизвестная роль - {role}")
+            errors.append(f"Неизвестная роль - {role}")
     if role is None:
         role = ROLE_DEFAULT
 
@@ -104,17 +103,17 @@ async def login_account(
     """
     email = email.strip()
     if not email:
-        return {"error": "Эл. почта должна быть заполнена"}
+        return {"error": ["Эл. почта должна быть заполнена"]}
     if not "@" in email or not "." in email:
-        return {"error": "Неккоректная эл. почта"}
-    if email.endswith(tuple(EMAIL_RESTRICTED_DOMAINS)):
-        return {"error": "Недопустимая почта"}
+        return {"error": ["Неккоректная эл. почта"]}
+    if email.endswith(EMAIL_RESTRICTED_DOMAINS):
+        return {"error": ["Недопустимая почта"]}
 
     password = password.strip()
     if not password:
-        return {"error": "Пароль должен быть заполнен"}
+        return {"error": ["Пароль должен быть заполнен"]}
     if len(password) < PASSWORD_MIN_LEN:
-        return {"error": "Пароль слишком короткий"}
+        return {"error": ["Пароль слишком короткий"]}
 
     user, err = await db.user_read(
         email=email,
@@ -172,7 +171,7 @@ async def search_accounts(
         searches['spec'] = spec
 
     if not searches:
-        return {"error": "Нужно уточнить хотябы один параметр поиска"}
+        return {"error": ["Нужно уточнить хотябы один параметр поиска"]}
 
     users, err = await db.user_readall(**searches)
     if err:
@@ -194,11 +193,11 @@ async def update_account_email(
     """
     new_email = new_email.strip()
     if not new_email:
-        return {"error": "Эл. почта должна быть заполнена"}
+        return {"error": ["Эл. почта должна быть заполнена"]}
     if not "@" in new_email or not "." in new_email:
-        return {"error": "Неккоректная эл. почта"}
-    if new_email.endswith(tuple(EMAIL_RESTRICTED_DOMAINS)):
-        return {"error": "Недопустимая почта"}
+        return {"error": ["Неккоректная эл. почта"]}
+    if new_email.endswith(EMAIL_RESTRICTED_DOMAINS):
+        return {"error": ["Недопустимая почта"]}
 
     user, err = await db.user_update(
         user_id,
@@ -224,11 +223,11 @@ async def update_account_password(
 
     new_password = new_password.strip()
     if not new_password:
-        return {"error": "Пароль должен быть заполнен"}
+        return {"error": ["Пароль должен быть заполнен"]}
     if len(new_password) < PASSWORD_MIN_LEN:
-        return {"error": "Пароль слишком короткий"}
+        return {"error": ["Пароль слишком короткий"]}
     if new_password in (user.email, user.first_name, user.last_name, user.full_name):
-        return {"error": "Слишком небезопасный пароль"}
+        return {"error": ["Слишком небезопасный пароль"]}
 
     user, err = await db.user_update(
         user_id,
@@ -252,9 +251,9 @@ async def update_account_names(
     :param new_last_name: Новая фамилия.
     """
     if (new_first_name is None and new_last_name is None) or (not new_first_name.strip() and not new_last_name.strip()):
-        return {"error": "Нужно внести хоть какие-то изменения"}
+        return {"error": ["Нужно внести хоть какие-то изменения"]}
 
-    errors = []
+    errors: list[str] = []
 
     if new_first_name:
         new_first_name = new_first_name.strip()
@@ -306,7 +305,7 @@ async def update_account_bio(
         if not new_bio:
             new_bio = None
         if new_bio and len(new_bio) > BIO_MAX_LEN:
-            return {"error": "Описание слишком длинное"}
+            return {"error": ["Описание слишком длинное"]}
 
     updated_user, err = await db.user_update(
         user_id,
