@@ -10,5 +10,8 @@ from .users import (
 from .orders import (
     create_order,
     read_order,
-    close_order
+    update_order_title, update_order_techspec,
+    update_order_status,
+    update_order_manager, update_order_students,
+    delete_order
 )
