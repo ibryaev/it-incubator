@@ -1,13 +1,13 @@
-user_role_type = ('customer', 'student', 'manager', 'admin')
-user_role = {
+user_role_type: tuple[str] = ('customer', 'student', 'manager', 'admin')
+user_role: dict[str, str] = {
     "customer": "заказчик",
     "student": "студент",
     "manager": "менеджер",
     "admin": "администратор"
 }
 
-user_spec_type = ('frontend', 'backend', 'fullstack', 'analytic', 'tester', 'designer', 'devops', 'other')
-user_spec = {
+user_spec_type: tuple[str] = ('frontend', 'backend', 'fullstack', 'analytic', 'tester', 'designer', 'devops', 'other')
+user_spec: dict[str, str] = {
     "frontend": "фронтенд",
     "backend": "бэкенд",
     "fullstack": "фуллстек",
@@ -18,8 +18,8 @@ user_spec = {
     "other": "другое"
 }
 
-order_status_type = ('created', 'taken', 'testing', 'done', 'canceled')
-order_status = {
+order_status_type: tuple[str] = ('created', 'taken', 'testing', 'done', 'canceled')
+order_status: dict[str, str] = {
     "created": "создан",
     "taken": "взят",
     "testing": "тестируется",
