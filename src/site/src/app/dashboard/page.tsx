@@ -84,14 +84,20 @@ export default function DashboardPage() {
     setEditTarget(target);
     setTempValue(target === "password" ? "" : currentVal);
     setError("");
-    setShowPassword(false); // Сбрасываем видимость пароля при начале редактирования
+    setShowPassword(false);
   };
 
   const handleSave = async () => {
-    // 1. ПРОВЕРКА НА ИЗМЕНЕНИЯ: Если ничего не поменяли, просто закрываем форму (чтобы не было ошибки от БД)
+    // Если ничего не изменилось - просто закрываем форму без ошибок
     if (editTarget === "name" && tempValue.trim() === user.first_name) return setEditTarget(null);
     if (editTarget === "email" && tempValue.trim() === user.email) return setEditTarget(null);
     if (editTarget === "password" && !tempValue.trim()) return setEditTarget(null);
+
+    // Защита: для API нужен старый пароль, проверяем, есть ли он в памяти браузера
+    if (!user.passwordRaw) {
+      setError("Для изменения данных необходимо подтвердить личность. Пожалуйста, выйдите из аккаунта и войдите снова.");
+      return;
+    }
 
     setIsUpdating(true);
     setError("");
@@ -117,12 +123,12 @@ export default function DashboardPage() {
           "Content-Type": "application/json",
           [headerKey]: tempValue.trim()
         },
-        body: JSON.stringify({ email: user.email, password: user.passwordRaw || "" }),
+        body: JSON.stringify({ email: user.email, password: user.passwordRaw }),
       });
 
       const data = await res.json();
       
-      // Обработка ошибок в формате твоего бэкенда
+      // Парсим ошибки бэкенда
       if (!res.ok) {
         let backendError = "Ошибка сервера";
         if (data.detail) {
@@ -134,7 +140,7 @@ export default function DashboardPage() {
         throw new Error(backendError);
       }
 
-      // Если всё успешно, обновляем контекст
+      // Успех -> обновляем локальные данные
       const updatedUser = { ...user };
       if (editTarget === "name") updatedUser.first_name = tempValue.trim();
       if (editTarget === "email") updatedUser.email = tempValue.trim();
@@ -149,29 +155,24 @@ export default function DashboardPage() {
     }
   };
 
-  // --- ИСПРАВЛЕННАЯ ФУНКЦИЯ РЕНДЕРА ПОЛЕЙ ---
-  // Теперь это обычная функция, возвращающая JSX, а не React-компонент. Фокус больше не теряется!
+  // --- УМНЫЙ РЕНДЕР ПОЛЕЙ ---
   const renderField = (label: string, target: "name" | "email" | "password", currentValue: string, isPassword = false) => {
     const isEditing = editTarget === target;
     
-    // Логика отображения:
-    // В режиме редактирования -> показываем то, что печатают
-    // В режиме просмотра пароля -> показываем реальный пароль (если знаем) или условные символы (браузер сам закроет их точками)
-    const actualValue = isEditing ? tempValue : (isPassword ? (user.passwordRaw || "••••••••") : currentValue);
+    // В режиме редактирования показываем tempValue. В режиме просмотра пароля - фейковые данные (чтобы точки всегда рисовались).
+    const actualValue = isEditing ? tempValue : (isPassword ? "12345678" : currentValue);
     
-    // Тип инпута: если это пароль и глазик НЕ нажат, используем "password" (системные точки)
+    // Тип инпута зависит от кнопки глазика
     const inputType = isPassword && !showPassword ? "password" : "text";
-
-    // Показывать ли глазик: при редактировании всегда, при просмотре - только если мы знаем пароль
-    const canShowEye = isPassword && (isEditing || !!user.passwordRaw);
 
     return (
       <div className="w-full mb-6">
         <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] mb-2 ml-1">{label}</p>
+        
         <div className={`
           relative w-full flex items-center rounded-xl transition-all duration-300
-          bg-white/[0.03] border backdrop-blur-md px-5 py-3.5
-          ${isEditing ? "border-white/20 bg-white/[0.06] shadow-[0_0_15px_rgba(255,255,255,0.05)]" : "border-white/10"}
+          bg-white/[0.03] border backdrop-blur-md px-5 py-3
+          ${isEditing ? "border-white/30 bg-white/[0.06] shadow-[0_0_15px_rgba(255,255,255,0.05)]" : "border-white/10"}
         `}>
           <input
             type={inputType}
@@ -179,47 +180,68 @@ export default function DashboardPage() {
             readOnly={!isEditing}
             onChange={(e) => setTempValue(e.target.value)}
             className={`
-              flex-1 bg-transparent border-none outline-none text-white text-sm md:text-base
-              ${isEditing ? "placeholder:text-gray-500" : ""}
+              flex-1 bg-transparent border-none outline-none text-white text-sm md:text-base tracking-wide
+              ${isEditing ? "placeholder:text-gray-600" : ""}
             `}
             placeholder={isEditing && isPassword ? "Введите новый пароль" : ""}
           />
           
-          <div className="flex items-center gap-4 ml-2 shrink-0">
-            {canShowEye && (
-              <button onClick={() => setShowPassword(!showPassword)} className="text-gray-500 hover:text-white transition-colors outline-none">
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          {/* Зона с кнопками (теперь с нормальными отступами и hover-эффектами!) */}
+          <div className="flex items-center gap-2 ml-2 shrink-0">
+            {isPassword && (
+              <button 
+                type="button"
+                onClick={(e) => { e.preventDefault(); setShowPassword(!showPassword); }} 
+                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             )}
 
             {isEditing ? (
               <>
-                <button onClick={handleSave} disabled={isUpdating} className="text-green-400 hover:scale-110 transition-transform outline-none">
-                  <Check size={20} />
+                <button 
+                  type="button"
+                  onClick={async (e) => { e.preventDefault(); await handleSave(); }} 
+                  disabled={isUpdating} 
+                  className="p-2 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 transition-colors disabled:opacity-50"
+                >
+                  <Check size={16} />
                 </button>
-                <button onClick={() => setEditTarget(null)} disabled={isUpdating} className="text-red-400 hover:scale-110 transition-transform outline-none">
-                  <X size={20} />
+                <button 
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); setEditTarget(null); setError(""); }} 
+                  disabled={isUpdating} 
+                  className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors disabled:opacity-50"
+                >
+                  <X size={16} />
                 </button>
               </>
             ) : (
-              <button onClick={() => handleStartEdit(target, isPassword ? "" : currentValue)} className="text-gray-500 hover:text-white transition-colors outline-none">
+              <button 
+                type="button"
+                onClick={(e) => { e.preventDefault(); handleStartEdit(target, isPassword ? "" : currentValue); }} 
+                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+              >
                 <Pencil size={16} />
               </button>
             )}
           </div>
         </div>
 
-        {/* 4. ОШИБКА ТЕПЕРЬ ПОЯВЛЯЕТСЯ ПРЯМО ПОД АКТИВНЫМ ПОЛЕМ */}
+        {/* ОШИБКА ОТОБРАЖАЕТСЯ ИМЕННО ПОД ЭТИМ ПОЛЕМ */}
         <AnimatePresence>
           {isEditing && error && (
-            <motion.p 
+            <motion.div 
               initial={{ opacity: 0, height: 0, marginTop: 0 }} 
               animate={{ opacity: 1, height: "auto", marginTop: 8 }} 
               exit={{ opacity: 0, height: 0, marginTop: 0 }} 
-              className="text-red-400 text-[11px] italic ml-1"
+              className="overflow-hidden"
             >
-              {error}
-            </motion.p>
+              <div className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                {error}
+              </div>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>
@@ -238,7 +260,7 @@ export default function DashboardPage() {
           Личный кабинет
         </motion.h1>
 
-        <motion.div variants={fadeInUp} className="flex flex-col md:flex-row items-center justify-start gap-12 md:gap-20 mb-28 relative">
+        <motion.div variants={fadeInUp} className="flex flex-col md:flex-row items-start justify-start gap-12 md:gap-20 mb-28 relative">
           
           <button onClick={logout} className="absolute -top-10 right-0 text-gray-500 hover:text-red-400 flex items-center gap-2 transition-colors text-xs uppercase tracking-widest">
             <LogOut size={14} /> Выйти
@@ -249,11 +271,7 @@ export default function DashboardPage() {
             className="group relative shrink-0 w-48 h-48 md:w-56 md:h-56 rounded-full bg-[#1A1A1E] flex items-center justify-center border border-white/5 shadow-2xl overflow-hidden cursor-pointer"
           >
             {user.avatar_url ? (
-              <img 
-                src={user.avatar_url.startsWith('http') ? user.avatar_url : `/it-incubator${user.avatar_url}`} 
-                alt="avatar" 
-                className="w-full h-full object-cover" 
-              />
+              <img src={user.avatar_url.startsWith('http') ? user.avatar_url : `/it-incubator${user.avatar_url}`} alt="avatar" className="w-full h-full object-cover" />
             ) : (
               <User className="w-20 h-20 text-[#2A2A30]" strokeWidth={1} />
             )}
