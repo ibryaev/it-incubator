@@ -108,7 +108,7 @@ export default function DashboardPage() {
 
       if (editTarget === "name") {
         endpoint = "/api/users/update/names";
-        headerKey = "new_fist_name";
+        headerKey = "new_first_name";
       } else if (editTarget === "email") {
         endpoint = "/api/users/update/email";
         headerKey = "new_email";
