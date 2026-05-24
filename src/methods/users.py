@@ -132,6 +132,15 @@ async def login_account(
         print(f"methods/users.py: login_account(): Ошибка: {e}")
         return {"error": ["Непредвиденная ошибка. Пользователь не был найден. Сообщите об этой ошибке"]}
     else:
+        old_password_hash = user.password_hash
+        if ph.check_needs_rehash(user.password_hash):
+            password_hash = ph.hash(password)
+            user, err = await db.user_update(
+                user.id,
+                password_hash=password_hash
+            )
+            if err:
+                user.password_hash = old_password_hash
         return dict(vars(user))
 
 async def read_account(
