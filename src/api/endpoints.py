@@ -231,7 +231,7 @@ async def user_update_avatar(
         avatar_url=url
     )
     if err:
-        return {"error": err}
+        return {"error": [err]}
     return dict(vars(user))
 
 @router.post("/users/update/spec")
@@ -384,6 +384,27 @@ async def order_update_techspec(
     if "error" in updated_order:
         raise HTTPException(403, updated_order['error'])
     return updated_order
+
+@router.post("/orders/update/preview")
+async def order_update_preview(
+    order_id: int = Header(..., alias="order_id"),
+    file: Optional[UploadFile] = File(...)
+):
+    os.makedirs("src/site/public/previews", exist_ok=True)
+    file_path = f"src/site/public/previews/order_{order_id}.jpg"
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    url = f"/previews/order_{order_id}.jpg"
+
+    user, err = await db.user_update(
+        order_id,
+        preview_url=url
+    )
+    if err:
+        return {"error": [err]}
+    return dict(vars(user))
 
 @router.post("/orders/update/status")
 async def order_update_status(
