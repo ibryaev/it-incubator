@@ -38,20 +38,6 @@ const projectsData: Project[] = [
     status: "Готов",
     statusColor: "text-green-500",
   },
-  {
-    id: 3,
-    title: "Telegram-бот для заявок",
-    description: "Бот для автоматического сбора заявок от клиентов и интеграции с CRM-системой.",
-    status: "Готов",
-    statusColor: "text-green-500",
-  },
-  {
-    id: 4,
-    title: "Внутренний дашборд",
-    description: "Админ-панель для мониторинга активности пользователей и управления доступом.",
-    status: "В разработке",
-    statusColor: "text-yellow-500",
-  },
 ];
 
 // --- АНИМАЦИИ ---
@@ -77,7 +63,6 @@ export default function DashboardPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Состояния для управления списком проектов
   const [showAllProjects, setShowAllProjects] = useState(false);
 
   // Состояния редактирования профиля
@@ -99,11 +84,17 @@ export default function DashboardPage() {
     setEditTarget(target);
     setTempValue(target === "password" ? "" : currentVal);
     setError("");
+    setShowPassword(false); // Сбрасываем видимость пароля при начале редактирования
   };
 
   const handleSave = async () => {
-    if (!tempValue.trim() && editTarget !== "password") return setEditTarget(null);
+    // 1. ПРОВЕРКА НА ИЗМЕНЕНИЯ: Если ничего не поменяли, просто закрываем форму (чтобы не было ошибки от БД)
+    if (editTarget === "name" && tempValue.trim() === user.first_name) return setEditTarget(null);
+    if (editTarget === "email" && tempValue.trim() === user.email) return setEditTarget(null);
+    if (editTarget === "password" && !tempValue.trim()) return setEditTarget(null);
+
     setIsUpdating(true);
+    setError("");
     
     try {
       let endpoint = "";
@@ -126,16 +117,28 @@ export default function DashboardPage() {
           "Content-Type": "application/json",
           [headerKey]: tempValue.trim()
         },
-        body: JSON.stringify({ email: user.email, password: user.passwordRaw }),
+        body: JSON.stringify({ email: user.email, password: user.passwordRaw || "" }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail?.[0] || data.detail || "Ошибка");
+      
+      // Обработка ошибок в формате твоего бэкенда
+      if (!res.ok) {
+        let backendError = "Ошибка сервера";
+        if (data.detail) {
+          if (typeof data.detail === "string") backendError = data.detail;
+          else if (Array.isArray(data.detail)) backendError = typeof data.detail[0] === "string" ? data.detail[0] : data.detail[0]?.msg || "Ошибка валидации";
+        } else if (data.error) {
+          backendError = typeof data.error === "string" ? data.error : data.error[0];
+        }
+        throw new Error(backendError);
+      }
 
+      // Если всё успешно, обновляем контекст
       const updatedUser = { ...user };
-      if (editTarget === "name") updatedUser.first_name = tempValue;
-      if (editTarget === "email") updatedUser.email = tempValue;
-      if (editTarget === "password") updatedUser.passwordRaw = tempValue;
+      if (editTarget === "name") updatedUser.first_name = tempValue.trim();
+      if (editTarget === "email") updatedUser.email = tempValue.trim();
+      if (editTarget === "password") updatedUser.passwordRaw = tempValue.trim();
       
       login(updatedUser);
       setEditTarget(null);
@@ -146,58 +149,79 @@ export default function DashboardPage() {
     }
   };
 
-  const ProfileField = ({ 
-    label, 
-    value, 
-    target, 
-    isPassword = false 
-  }: { 
-    label: string; 
-    value: string; 
-    target: "name" | "email" | "password";
-    isPassword?: boolean;
-  }) => {
+  // --- ИСПРАВЛЕННАЯ ФУНКЦИЯ РЕНДЕРА ПОЛЕЙ ---
+  // Теперь это обычная функция, возвращающая JSX, а не React-компонент. Фокус больше не теряется!
+  const renderField = (label: string, target: "name" | "email" | "password", currentValue: string, isPassword = false) => {
     const isEditing = editTarget === target;
+    
+    // Логика отображения:
+    // В режиме редактирования -> показываем то, что печатают
+    // В режиме просмотра пароля -> показываем реальный пароль (если знаем) или условные символы (браузер сам закроет их точками)
+    const actualValue = isEditing ? tempValue : (isPassword ? (user.passwordRaw || "••••••••") : currentValue);
+    
+    // Тип инпута: если это пароль и глазик НЕ нажат, используем "password" (системные точки)
+    const inputType = isPassword && !showPassword ? "password" : "text";
+
+    // Показывать ли глазик: при редактировании всегда, при просмотре - только если мы знаем пароль
+    const canShowEye = isPassword && (isEditing || !!user.passwordRaw);
 
     return (
-      <div className="w-full">
+      <div className="w-full mb-6">
         <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] mb-2 ml-1">{label}</p>
         <div className={`
           relative w-full flex items-center rounded-xl transition-all duration-300
           bg-white/[0.03] border backdrop-blur-md px-5 py-3.5
-          ${isEditing ? "border-white/20 bg-white/[0.06]" : "border-white/10"}
+          ${isEditing ? "border-white/20 bg-white/[0.06] shadow-[0_0_15px_rgba(255,255,255,0.05)]" : "border-white/10"}
         `}>
           <input
-            type={isPassword && !showPassword ? "password" : "text"}
-            value={isEditing ? tempValue : (isPassword ? "********" : value)}
+            type={inputType}
+            value={actualValue}
             readOnly={!isEditing}
             onChange={(e) => setTempValue(e.target.value)}
-            className="flex-1 bg-transparent border-none outline-none text-white placeholder:text-gray-600 text-sm md:text-base"
+            className={`
+              flex-1 bg-transparent border-none outline-none text-white text-sm md:text-base
+              ${isEditing ? "placeholder:text-gray-500" : ""}
+            `}
+            placeholder={isEditing && isPassword ? "Введите новый пароль" : ""}
           />
           
-          <div className="flex items-center gap-3 ml-2">
-            {isPassword && (
-              <button onClick={() => setShowPassword(!showPassword)} className="text-gray-500 hover:text-white transition-colors">
+          <div className="flex items-center gap-4 ml-2 shrink-0">
+            {canShowEye && (
+              <button onClick={() => setShowPassword(!showPassword)} className="text-gray-500 hover:text-white transition-colors outline-none">
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             )}
 
             {isEditing ? (
               <>
-                <button onClick={handleSave} className="text-green-400 hover:scale-110 transition-transform">
+                <button onClick={handleSave} disabled={isUpdating} className="text-green-400 hover:scale-110 transition-transform outline-none">
                   <Check size={20} />
                 </button>
-                <button onClick={() => setEditTarget(null)} className="text-red-400 hover:scale-110 transition-transform">
+                <button onClick={() => setEditTarget(null)} disabled={isUpdating} className="text-red-400 hover:scale-110 transition-transform outline-none">
                   <X size={20} />
                 </button>
               </>
             ) : (
-              <button onClick={() => handleStartEdit(target, value)} className="text-gray-500 hover:text-white transition-colors">
+              <button onClick={() => handleStartEdit(target, isPassword ? "" : currentValue)} className="text-gray-500 hover:text-white transition-colors outline-none">
                 <Pencil size={16} />
               </button>
             )}
           </div>
         </div>
+
+        {/* 4. ОШИБКА ТЕПЕРЬ ПОЯВЛЯЕТСЯ ПРЯМО ПОД АКТИВНЫМ ПОЛЕМ */}
+        <AnimatePresence>
+          {isEditing && error && (
+            <motion.p 
+              initial={{ opacity: 0, height: 0, marginTop: 0 }} 
+              animate={{ opacity: 1, height: "auto", marginTop: 8 }} 
+              exit={{ opacity: 0, height: 0, marginTop: 0 }} 
+              className="text-red-400 text-[11px] italic ml-1"
+            >
+              {error}
+            </motion.p>
+          )}
+        </AnimatePresence>
       </div>
     );
   };
@@ -225,7 +249,11 @@ export default function DashboardPage() {
             className="group relative shrink-0 w-48 h-48 md:w-56 md:h-56 rounded-full bg-[#1A1A1E] flex items-center justify-center border border-white/5 shadow-2xl overflow-hidden cursor-pointer"
           >
             {user.avatar_url ? (
-              <img src={`/it-incubator${user.avatar_url}`} alt="avatar" className="w-full h-full object-cover" />
+              <img 
+                src={user.avatar_url.startsWith('http') ? user.avatar_url : `/it-incubator${user.avatar_url}`} 
+                alt="avatar" 
+                className="w-full h-full object-cover" 
+              />
             ) : (
               <User className="w-20 h-20 text-[#2A2A30]" strokeWidth={1} />
             )}
@@ -241,12 +269,10 @@ export default function DashboardPage() {
             }} />
           </div>
 
-          <div className="w-full max-w-lg space-y-5">
-            <ProfileField label="Имя" value={user.first_name} target="name" />
-            <ProfileField label="Электронная почта" value={user.email} target="email" />
-            <ProfileField label="Пароль" value="********" target="password" isPassword />
-            
-            {error && <p className="text-red-400 text-[11px] italic ml-1">{error}</p>}
+          <div className="w-full max-w-lg">
+            {renderField("Имя", "name", user.first_name)}
+            {renderField("Электронная почта", "email", user.email)}
+            {renderField("Пароль", "password", "", true)}
 
             <div className="pt-2">
               <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] mb-2 ml-1">Статус</p>
