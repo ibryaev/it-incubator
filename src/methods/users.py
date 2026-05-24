@@ -2,6 +2,10 @@ from typing import Optional
 from utils import user_role_type, user_spec_type
 from database import *
 from config import *
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
+
+ph = PasswordHasher()
 
 async def register_account(
     email: str,
@@ -24,7 +28,7 @@ async def register_account(
     """
     errors: list[str] = []
 
-    email = email.strip()
+    email = email.lower().strip()
     if not email:
         errors.append("Эл. почта должна быть заполнена")
     if not "@" in email or not "." in email:
@@ -52,6 +56,7 @@ async def register_account(
         errors.append("Пароль слишком короткий")
     if password in (email, first_name, last_name, f"{first_name} {last_name}"):
         errors.append("Слишком небезопасный пароль")
+    password_hash = ph.hash(password)
 
     if role:
         role = role.strip()
@@ -80,7 +85,7 @@ async def register_account(
 
     new_user, err = await db.user_create(
         email,
-        password,
+        password_hash,
         first_name,
         last_name,
         role,
@@ -98,10 +103,10 @@ async def login_account(
     Находит пользователя по его эл. почте и паролю.
 
     :param email: Электронная почта, привязанная к учётной записи.
-    :param password: Пароль (нехэшированный) к учётной записи.
+    :param password: Пароль к учётной записи.
     :return: В случае успеха возвращает словарь с данными пользователя. Иначе: :code:`{"error": [ошибк(а/и)]}`.
     """
-    email = email.strip()
+    email = email.lower().strip()
     if not email:
         return {"error": ["Эл. почта должна быть заполнена"]}
     if not "@" in email or not "." in email:
@@ -115,13 +120,19 @@ async def login_account(
     if len(password) < PASSWORD_MIN_LEN:
         return {"error": ["Пароль слишком короткий"]}
 
-    user, err = await db.user_read(
-        email=email,
-        password_hash=password
-    )
+    user, err = await db.user_read(email=email)
     if err:
-        return {"error": [err]}
-    return dict(vars(user))
+        return {"error": ["Неверная почта или пароль"]}
+
+    try:
+        ph.verify(user.password_hash, password)
+    except VerifyMismatchError:
+        return {"error": ["Неверная почта или пароль"]}
+    except Exception as e:
+        print(f"methods/users.py: login_account(): Ошибка: {e}")
+        return {"error": ["Непредвиденная ошибка. Пользователь не был найден. Сообщите об этой ошибке"]}
+    else:
+        return dict(vars(user))
 
 async def read_account(
     user_id: int
@@ -191,7 +202,7 @@ async def update_account_email(
     :param user_id: UID учётной записи, чьи параметры подлежат обновлению.
     :param new_email: Новая эл. почта.
     """
-    new_email = new_email.strip()
+    new_email = new_email.lower().strip()
     if not new_email:
         return {"error": ["Эл. почта должна быть заполнена"]}
     if not "@" in new_email or not "." in new_email:
@@ -226,12 +237,19 @@ async def update_account_password(
         return {"error": ["Пароль должен быть заполнен"]}
     if len(new_password) < PASSWORD_MIN_LEN:
         return {"error": ["Пароль слишком короткий"]}
-    if new_password in (user.email, user.first_name, user.last_name, user.full_name):
-        return {"error": ["Слишком небезопасный пароль"]}
+    personal_data = (
+        str(user.email).casefold(),
+        str(user.first_name).casefold(),
+        str(user.last_name).casefold(),
+        str(user.full_name).casefold()
+    )
+    if new_password.casefold() in personal_data:
+        return {"error": ["Слишком простой пароль"]}
 
+    new_password_hash = ph.hash(new_password)
     user, err = await db.user_update(
         user_id,
-        password_hash=new_password
+        password_hash=new_password_hash
     )
     if err:
         return {"error": [err]}
