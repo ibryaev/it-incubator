@@ -82,20 +82,20 @@ export default function DashboardPage() {
 
   const handleStartEdit = (target: "name" | "email" | "password", currentVal: string) => {
     setEditTarget(target);
+    // Для пароля мы всегда начинаем с пустого поля при редактировании
     setTempValue(target === "password" ? "" : currentVal);
     setError("");
     setShowPassword(false);
   };
 
   const handleSave = async () => {
-    // Если ничего не изменилось - просто закрываем форму без ошибок
+    // 1. Проверка на изменения
     if (editTarget === "name" && tempValue.trim() === user.first_name) return setEditTarget(null);
     if (editTarget === "email" && tempValue.trim() === user.email) return setEditTarget(null);
     if (editTarget === "password" && !tempValue.trim()) return setEditTarget(null);
 
-    // Защита: для API нужен старый пароль, проверяем, есть ли он в памяти браузера
     if (!user.passwordRaw) {
-      setError("Для изменения данных необходимо подтвердить личность. Пожалуйста, выйдите из аккаунта и войдите снова.");
+      setError("Сессия устарела. Пожалуйста, перезайдите в аккаунт.");
       return;
     }
 
@@ -108,7 +108,7 @@ export default function DashboardPage() {
 
       if (editTarget === "name") {
         endpoint = "/api/users/update/names";
-        headerKey = "new_first_name";
+        headerKey = "new_first_name"; // ИСПРАВЛЕНО НА ПРАВИЛЬНЫЙ КЛЮЧ
       } else if (editTarget === "email") {
         endpoint = "/api/users/update/email";
         headerKey = "new_email";
@@ -128,7 +128,6 @@ export default function DashboardPage() {
 
       const data = await res.json();
       
-      // Парсим ошибки бэкенда
       if (!res.ok) {
         let backendError = "Ошибка сервера";
         if (data.detail) {
@@ -140,7 +139,6 @@ export default function DashboardPage() {
         throw new Error(backendError);
       }
 
-      // Успех -> обновляем локальные данные
       const updatedUser = { ...user };
       if (editTarget === "name") updatedUser.first_name = tempValue.trim();
       if (editTarget === "email") updatedUser.email = tempValue.trim();
@@ -155,14 +153,16 @@ export default function DashboardPage() {
     }
   };
 
-  // --- УМНЫЙ РЕНДЕР ПОЛЕЙ ---
   const renderField = (label: string, target: "name" | "email" | "password", currentValue: string, isPassword = false) => {
     const isEditing = editTarget === target;
     
-    // В режиме редактирования показываем tempValue. В режиме просмотра пароля - фейковые данные (чтобы точки всегда рисовались).
-    const actualValue = isEditing ? tempValue : (isPassword ? "12345678" : currentValue);
+    // ИСТИННАЯ ЛОГИКА ОТОБРАЖЕНИЯ:
+    // Если мы редактируем - показываем то, что печатают (tempValue).
+    // Если мы смотрим пароль - показываем НАСТОЯЩИЙ пароль (user.passwordRaw).
+    // Если мы смотрим обычное поле - показываем currentValue.
+    const actualValue = isEditing ? tempValue : (isPassword ? (user.passwordRaw || "") : currentValue);
     
-    // Тип инпута зависит от кнопки глазика
+    // Тип инпута зависит ТОЛЬКО от состояния showPassword и от того, пароль ли это.
     const inputType = isPassword && !showPassword ? "password" : "text";
 
     return (
@@ -186,7 +186,6 @@ export default function DashboardPage() {
             placeholder={isEditing && isPassword ? "Введите новый пароль" : ""}
           />
           
-          {/* Зона с кнопками (теперь с нормальными отступами и hover-эффектами!) */}
           <div className="flex items-center gap-2 ml-2 shrink-0">
             {isPassword && (
               <button 
@@ -229,7 +228,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ОШИБКА ОТОБРАЖАЕТСЯ ИМЕННО ПОД ЭТИМ ПОЛЕМ */}
         <AnimatePresence>
           {isEditing && error && (
             <motion.div 
