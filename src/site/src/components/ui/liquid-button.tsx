@@ -1,24 +1,34 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
-import { motion, HTMLMotionProps } from "framer-motion";
+import React, { useRef, useState, useEffect } from "react";
 
 const MATTE_NOISE = "data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E";
 
-interface LiquidButtonProps extends HTMLMotionProps<"button"> {
+interface LiquidButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
+  className?: string;
 }
 
 export const LiquidButton = ({ children, className = "", ...props }: LiquidButtonProps) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const[filterId] = useState(() => `liquid-btn-${Math.random().toString(36).substr(2, 9)}`);
+  const [filterId] = useState(() => `liquid-btn-${Math.random().toString(36).substr(2, 9)}`);
   const [svgDefs, setSvgDefs] = useState<React.ReactNode>(null);
-  const [isChromium, setIsChromium] = useState(false);
+  const [useHeavyRender, setUseHeavyRender] = useState(false);
 
   useEffect(() => {
-    const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-    setIsChromium(isChrome);
+    // Включаем тяжелый SVG-рендеринг только на ПК в Chrome/Edge
+    const checkCapabilities = () => {
+      const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+      const isDesktop = window.innerWidth >= 768;
+      setUseHeavyRender(isChrome && isDesktop);
+    };
 
-    if (!isChrome || !buttonRef.current) return;
+    checkCapabilities();
+    window.addEventListener("resize", checkCapabilities);
+    return () => window.removeEventListener("resize", checkCapabilities);
+  }, []);
+
+  useEffect(() => {
+    if (!useHeavyRender || !buttonRef.current) return;
 
     let timeout: NodeJS.Timeout;
 
@@ -27,17 +37,17 @@ export const LiquidButton = ({ children, className = "", ...props }: LiquidButto
       const w = buttonRef.current.offsetWidth;
       const h = buttonRef.current.offsetHeight;
       
-      // Идентичные настройки с шапкой
-      const radius = Math.min(28, w / 2, h / 2); 
-      const bezelW = Math.max(1, Math.min(25, radius - 1));
-      const glassThick = 25; 
-      const ior = 1.5; 
-      const scaleMult = 3.0; 
-      const blurAmt = 6; 
+      const radius = Math.min(24, w / 2, h / 2);
+      const bezelW = Math.max(1, Math.min(20, radius - 1));
+      const glassThick = 25;
+      const ior = 1.5;
+      const scaleMult = 3.0;
+      const blurAmt = 6;
       
       const heightFn = (x: number) => Math.pow(1 - Math.pow(1 - x, 4), 0.25);
       const profile = new Float64Array(128);
       const eta = 1 / ior;
+      
       for (let i = 0; i < 128; i++) {
         const x = i / 128;
         const y = heightFn(x);
@@ -92,7 +102,7 @@ export const LiquidButton = ({ children, className = "", ...props }: LiquidButto
         }
       }
       ctx.putImageData(img, 0, 0);
-
+      
       setSvgDefs(
         <filter id={filterId} x="0%" y="0%" width="100%" height="100%" colorInterpolationFilters="sRGB">
           <feGaussianBlur in="SourceGraphic" stdDeviation={blurAmt} result="blurred" />
@@ -112,53 +122,45 @@ export const LiquidButton = ({ children, className = "", ...props }: LiquidButto
       observer.disconnect();
       clearTimeout(timeout);
     };
-  }, [filterId]);
+  }, [useHeavyRender, filterId]);
 
-  return (
-    <>
-      {isChromium && (
-        <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" className="absolute pointer-events-none">
-          <defs>{svgDefs}</defs>
-        </svg>
-      )}
-
-      <motion.button
-        ref={buttonRef}
-        whileHover={{ scale: 1.03 }}
-        whileTap={{ scale: 0.97 }}
-        className={`
-          relative px-8 py-3 rounded-full font-medium text-[13px] tracking-wider uppercase text-white overflow-hidden group
-          border border-white/[0.04]
-          transition-all duration-300
-          ${className}
-        `}
-        style={
-          isChromium
-            ? {
-                background: "rgba(20, 20, 25, 0.2)",
-                backdropFilter: `url(#${filterId})`,
-                WebkitBackdropFilter: `url(#${filterId})`,
-                boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-              }
-            : {
-                background: "rgba(20, 20, 25, 0.5)",
-                backdropFilter: "blur(24px)",
-                WebkitBackdropFilter: "blur(24px)",
-                boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-              }
-        }
+  // --- ЛЕГКАЯ ВЕРСИЯ (ТЕЛЕФОНЫ / НЕ-CHROME) ---
+  if (!useHeavyRender) {
+    return (
+      <button 
+        // ДОБАВЛЕНЫ ДЕФОЛТНЫЕ КЛАССЫ: text-[13px] font-semibold uppercase tracking-wider py-3.5 px-8
+        className={`relative flex items-center justify-center rounded-full border border-white/[0.05] bg-[#141419]/60 backdrop-blur-xl shadow-lg transition-all duration-300 text-white text-[13px] font-semibold uppercase tracking-wider py-3.5 px-8 ${className}`}
         {...props}
       >
-        {/* Микро-текстура матового стекла */}
+        <span className="relative z-10">{children}</span>
+      </button>
+    );
+  }
+
+  // --- ТЯЖЕЛАЯ ВЕРСИЯ (ПК) ---
+  return (
+    <>
+      <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" className="absolute pointer-events-none">
+        <defs>{svgDefs}</defs>
+      </svg>
+      <button 
+        ref={buttonRef}
+        // ДОБАВЛЕНЫ ДЕФОЛТНЫЕ КЛАССЫ: text-[13px] font-semibold uppercase tracking-wider py-3.5 px-8
+        className={`relative flex items-center justify-center rounded-full border border-white/[0.04] overflow-hidden transition-all duration-300 text-white text-[13px] font-semibold uppercase tracking-wider py-3.5 px-8 ${className}`}
+        style={{
+          background: "rgba(20, 20, 25, 0.2)",
+          backdropFilter: `url(#${filterId})`,
+          WebkitBackdropFilter: `url(#${filterId})`,
+          boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+        }}
+        {...props}
+      >
         <div 
           className="absolute inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay"
           style={{ backgroundImage: `url("${MATTE_NOISE}")` }}
         />
-        
-        <span className="relative z-10 flex items-center justify-center gap-2 drop-shadow-md">
-          {children}
-        </span>
-      </motion.button>
+        <span className="relative z-10">{children}</span>
+      </button>
     </>
   );
 };

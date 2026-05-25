@@ -91,33 +91,36 @@ function RippleCircles() {
       className="absolute inset-0 pointer-events-none"
       style={{ zIndex: 0, overflow: "hidden" }}
     >
-      {/* Возвращаем оригинальные блюры для центральных свечений */}
+      {/* 1. Большое фоновое свечение (Сделали крупнее на мобилке: 600px вместо 400px, и увеличили блюр) */}
       <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] md:w-[800px] md:h-[800px] rounded-full blur-[50px] md:blur-[60px]"
         style={{
-          position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 800, height: 800, borderRadius: "50%",
           background: "radial-gradient(circle, rgba(99,102,241,0.28) 0%, rgba(56,189,248,0.14) 45%, transparent 70%)",
-          filter: "blur(60px)",
         }}
       />
+      
+      {/* 2. Среднее свечение (показываем только на ПК для богатства цвета) */}
       <div
+        className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] rounded-full blur-[32px]"
         style={{
-          position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 480, height: 480, borderRadius: "50%",
           background: "radial-gradient(circle, rgba(139,92,246,0.42) 0%, rgba(99,102,241,0.18) 50%, transparent 70%)",
-          filter: "blur(32px)",
-        }}
-      />
-      <div
-        style={{
-          position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 290, height: 290, borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(210,200,255,0.65) 0%, rgba(160,130,255,0.30) 10%, transparent 100%)",
-          filter: "blur(32px)",
         }}
       />
 
-      {/* Кольца */}
-      {Array.from({ length: RIPPLE_COUNT }).map((_, i) => (
-        <RippleRing key={i} index={i} />
-      ))}
+      {/* 3. Яркая точка прямо за кубиком (Сделали крупнее на мобилке: 240px вместо 150px) */}
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[240px] h-[240px] md:w-[290px] md:h-[290px] rounded-full blur-[28px] md:blur-[32px]"
+        style={{
+          background: "radial-gradient(circle, rgba(210,200,255,0.65) 0%, rgba(160,130,255,0.30) 10%, transparent 100%)",
+        }}
+      />
+
+      {/* Кольца — скрыты на телефонах (hidden md:block) */}
+      <div className="hidden md:block">
+        {Array.from({ length: RIPPLE_COUNT }).map((_, i) => (
+          <RippleRing key={i} index={i} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -185,6 +188,7 @@ export default function Home() {
           </div>
         </motion.div>
 
+        {/* Кнопка обсудить проект */}
         <motion.div
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -198,12 +202,13 @@ export default function Home() {
           </Link>
         </motion.div>
 
+        {/* ВОЗВРАЩАЕМ МАСКУ: Она скрыта на мобилках (hidden) и видна только на ПК (md:block) */}
         <div
           aria-hidden="true"
+          className="hidden md:block absolute bottom-0 left-0 right-0 h-[40%] pointer-events-none"
           style={{
-            position: "absolute", bottom: 0, left: 0, right: 0, height: "40%",
             background: "linear-gradient(to bottom, transparent 0%, rgba(10,10,15,0.7) 60%, #0a0a0f 100%)",
-            zIndex: 3, pointerEvents: "none",
+            zIndex: 3,
           }}
         />
       </section>

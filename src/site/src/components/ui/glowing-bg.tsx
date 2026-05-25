@@ -11,7 +11,8 @@ export const GlowingBackground = () => {
           y: [0, -50, 0],
         }}
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute -left-[20%] top-[20%] h-[500px] w-[500px] rounded-full bg-blue-600/20 blur-[120px]"
+        // Снизили прозрачность на мобилке до 10% (bg-blue-600/10)
+        className="absolute -left-[20%] top-[20%] h-[500px] w-[500px] rounded-full bg-blue-600/10 md:bg-blue-600/20 blur-[60px] md:blur-[120px]"
       />
       
       {/* Фиолетовое/Золотое пятно справа */}
@@ -21,7 +22,8 @@ export const GlowingBackground = () => {
           y: [0, 50, 0],
         }}
         transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute -right-[10%] top-[10%] h-[600px] w-[600px] rounded-full bg-purple-600/20 blur-[150px]"
+        // Снизили прозрачность на мобилке до 10% (bg-purple-600/10)
+        className="absolute -right-[10%] top-[10%] h-[600px] w-[600px] rounded-full bg-purple-600/10 md:bg-purple-600/20 blur-[80px] md:blur-[150px]"
       />
       
       {/* Акцентное светлое пятно по центру внизу */}
@@ -30,7 +32,8 @@ export const GlowingBackground = () => {
           scale:[1, 1.1, 1],
         }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute left-[40%] bottom-[-10%] h-[400px] w-[600px] rounded-full bg-cyan-500/10 blur-[100px]"
+        // Снизили прозрачность на мобилке до 5% (bg-cyan-500/5)
+        className="absolute left-[40%] bottom-[-10%] h-[400px] w-[600px] rounded-full bg-cyan-500/5 md:bg-cyan-500/10 blur-[60px] md:blur-[100px]"
       />
     </div>
   );

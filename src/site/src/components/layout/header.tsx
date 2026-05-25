@@ -15,12 +15,25 @@ const LiquidPill = ({ children, className = "" }: { children: React.ReactNode, c
   const pillRef = useRef<HTMLDivElement>(null);
   const [filterId] = useState(() => `liquid-pill-${Math.random().toString(36).substr(2, 9)}`);
   const [svgDefs, setSvgDefs] = useState<React.ReactNode>(null);
-  const [isChromium, setIsChromium] = useState(false);
+  
+  // Состояние: использовать ли тяжелый рендер
+  const [useHeavyRender, setUseHeavyRender] = useState(false);
 
   useEffect(() => {
-    const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-    setIsChromium(isChrome);
-    if (!isChrome || !pillRef.current) return;
+    // Включаем тяжелый SVG-фильтр ТОЛЬКО на ПК (ширина >= 768px) и ТОЛЬКО в Chrome
+    const checkCapabilities = () => {
+      const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+      const isDesktop = window.innerWidth >= 768;
+      setUseHeavyRender(isChrome && isDesktop);
+    };
+
+    checkCapabilities();
+    window.addEventListener("resize", checkCapabilities);
+    return () => window.removeEventListener("resize", checkCapabilities);
+  }, []);
+
+  useEffect(() => {
+    if (!useHeavyRender || !pillRef.current) return;
 
     let timeout: NodeJS.Timeout;
 
@@ -114,33 +127,34 @@ const LiquidPill = ({ children, className = "" }: { children: React.ReactNode, c
       observer.disconnect();
       clearTimeout(timeout);
     };
-  }, [filterId]);
+  }, [useHeavyRender, filterId]);
 
+  // ЛЕГКАЯ ВЕРСИЯ ДЛЯ ТЕЛЕФОНОВ (без SVG фильтров и Canvas)
+  if (!useHeavyRender) {
+    return (
+      <div className="relative h-full flex">
+        <div className={`relative rounded-[28px] border border-white/[0.04] overflow-hidden transition-all duration-300 w-full bg-[#141419]/60 backdrop-blur-xl shadow-lg ${className}`}>
+          <div className="relative z-10 h-full">{children}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // ТЯЖЕЛАЯ ВЕРСИЯ ДЛЯ ПК
   return (
     <div className="relative h-full flex">
-      {isChromium && (
-        <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" className="absolute pointer-events-none">
-          <defs>{svgDefs}</defs>
-        </svg>
-      )}
+      <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" className="absolute pointer-events-none">
+        <defs>{svgDefs}</defs>
+      </svg>
       <div 
         ref={pillRef}
         className={`relative rounded-[28px] border border-white/[0.04] overflow-hidden transition-all duration-300 w-full ${className}`}
-        style={
-          isChromium
-            ? {
-                background: "rgba(20, 20, 25, 0.2)",
-                backdropFilter: `url(#${filterId})`,
-                WebkitBackdropFilter: `url(#${filterId})`,
-                boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-              }
-            : {
-                background: "rgba(20, 20, 25, 0.5)",
-                backdropFilter: "blur(24px)",
-                WebkitBackdropFilter: "blur(24px)",
-                boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-              }
-        }
+        style={{
+          background: "rgba(20, 20, 25, 0.2)",
+          backdropFilter: `url(#${filterId})`,
+          WebkitBackdropFilter: `url(#${filterId})`,
+          boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+        }}
       >
         <div 
           className="absolute inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay"
