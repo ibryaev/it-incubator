@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, Variants, useScroll, useTransform } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { LiquidButton } from "@/components/ui/liquid-button";
@@ -21,7 +21,7 @@ const fadeInUp: Variants = {
     y: 0,
     transition: { 
       duration: 0.6, 
-      ease: [0.22, 1, 0.36, 1] // Теперь TS поймет, что это валидный ease
+      ease: [0.22, 1, 0.36, 1] 
     }
   }
 };
@@ -42,19 +42,16 @@ const imageReveal: Variants = {
     y: 0,
     transition: { 
       duration: 0.8, 
-      ease: "easeOut" as const // Добавляем as const здесь
+      ease: "easeOut" as const 
     }
   }
 };
 
-// ─── Анимированные круги-волны из центра ──────────────────────────────────────
-// Анимируем width/height напрямую (не scale) — нет артефактов и мерцания.
-// Все кольца одинаковая duration + равные delay → постоянная скорость, равный интервал.
+// ─── Анимированные круги-волны из центра (Оптимизированные) ─────────────────
 const RIPPLE_COUNT = 8;
-const RIPPLE_DURATION = 8.0; // 4.5 * 1.5 — интервал между кольцами в 1.5 раза больше
-const RIPPLE_MAX_SIZE = 2000; // 1600 * 2 — исчезают в 2 раза дальше, за краем экрана
+const RIPPLE_DURATION = 8.0; 
+const RIPPLE_MAX_SIZE = 2000; 
 
-// Каждое кольцо — отдельный компонент, чтобы хук useAnimate не нарушал Rules of Hooks
 function RippleRing({ index }: { index: number }) {
   const delay = index * (RIPPLE_DURATION / RIPPLE_COUNT);
 
@@ -63,21 +60,19 @@ function RippleRing({ index }: { index: number }) {
       aria-hidden="true"
       style={{
         position: "absolute",
-        // Стартуем с нулевого размера — translateX/Y центрируют
-        width: 0,
-        height: 0,
+        width: RIPPLE_MAX_SIZE,
+        height: RIPPLE_MAX_SIZE,
         borderRadius: "50%",
-        border: "3px solid rgba(185, 171, 255, 0.55)",
-        translateX: "-50%",
-        translateY: "-50%",
+        // Сделали круги чуть-чуть потолще (5px вместо 3px) и чуть ярче
+        border: "5px solid rgba(185, 171, 255, 0.6)", 
         top: "50%",
         left: "50%",
+        x: "-50%",
+        y: "-50%",
+        willChange: "transform, opacity",
       }}
-      animate={{
-        width:   [0, RIPPLE_MAX_SIZE],
-        height:  [0, RIPPLE_MAX_SIZE],
-        opacity: [0.7, 0],
-      }}
+      initial={{ scale: 0, opacity: 0.7 }}
+      animate={{ scale: 1, opacity: 0 }}
       transition={{
         ease: "linear",
         duration: RIPPLE_DURATION,
@@ -96,44 +91,30 @@ function RippleCircles() {
       className="absolute inset-0 pointer-events-none"
       style={{ zIndex: 0, overflow: "hidden" }}
     >
-      {/* Большое фоновое свечение */}
+      {/* Возвращаем оригинальные блюры для центральных свечений */}
       <div
         style={{
-          position: "absolute",
-          top: "50%", left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: 800, height: 800,
-          borderRadius: "50%",
+          position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 800, height: 800, borderRadius: "50%",
           background: "radial-gradient(circle, rgba(99,102,241,0.28) 0%, rgba(56,189,248,0.14) 45%, transparent 70%)",
           filter: "blur(60px)",
         }}
       />
-      {/* Среднее свечение */}
       <div
         style={{
-          position: "absolute",
-          top: "50%", left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: 480, height: 480,
-          borderRadius: "50%",
+          position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 480, height: 480, borderRadius: "50%",
           background: "radial-gradient(circle, rgba(139,92,246,0.42) 0%, rgba(99,102,241,0.18) 50%, transparent 70%)",
           filter: "blur(32px)",
         }}
       />
-      {/* Яркая точка в центре */}
       <div
         style={{
-          position: "absolute",
-          top: "50%", left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: 290, height: 290,
-          borderRadius: "50%",
+          position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 290, height: 290, borderRadius: "50%",
           background: "radial-gradient(circle, rgba(210,200,255,0.65) 0%, rgba(160,130,255,0.30) 10%, transparent 100%)",
           filter: "blur(32px)",
         }}
       />
 
-      {/* Кольца — width/height анимация без scale */}
+      {/* Кольца */}
       {Array.from({ length: RIPPLE_COUNT }).map((_, i) => (
         <RippleRing key={i} index={i} />
       ))}
@@ -141,57 +122,7 @@ function RippleCircles() {
   );
 }
 
-// ─── Фоновые параллакс-частицы (дальний план) ────────────────────────────────
-const PARTICLES = [
-  { x: "8%",  y: 120,  size: 180, color: "rgba(56,189,248,0.07)",  speed: 0.12 },
-  { x: "85%", y: 300,  size: 220, color: "rgba(139,92,246,0.06)",  speed: 0.18 },
-  { x: "15%", y: 1100, size: 200, color: "rgba(99,102,241,0.07)",  speed: 0.15 },
-  { x: "75%", y: 1500, size: 300, color: "rgba(56,189,248,0.05)",  speed: 0.20 },
-  { x: "30%", y: 2000, size: 240, color: "rgba(139,92,246,0.06)",  speed: 0.13 },
-  { x: "90%", y: 2400, size: 180, color: "rgba(34,211,238,0.07)",  speed: 0.17 },
-  { x: "5%",  y: 2800, size: 220, color: "rgba(56,189,248,0.05)",  speed: 0.11 },
-  { x: "60%", y: 3200, size: 280, color: "rgba(99,102,241,0.06)",  speed: 0.16 },
-  { x: "40%", y: 3700, size: 200, color: "rgba(139,92,246,0.05)",  speed: 0.19 },
-];
-
-// Отдельный компонент — хук useTransform вызывается на верхнем уровне, не в .map()
-function ParticleOrb({ x, y, size, color, speed }: typeof PARTICLES[number]) {
-  const { scrollY } = useScroll();
-  const translateY = useTransform(scrollY, (v: number) => -(v * speed));
-
-  return (
-    <motion.div
-      style={{
-        position: "absolute",
-        left: x,
-        top: y,
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        background: color,
-        filter: `blur(${size * 0.45}px)`,
-        translateY,
-        translateX: "-50%",
-      }}
-    />
-  );
-}
-
-function ParallaxParticles() {
-  return (
-    <div
-      className="fixed inset-0 pointer-events-none overflow-hidden"
-      style={{ zIndex: 0 }}
-      aria-hidden="true"
-    >
-      {PARTICLES.map((p, i) => (
-        <ParticleOrb key={i} {...p} />
-      ))}
-    </div>
-  );
-}
-
-// ─── Пятно привязанное к секции ───────────────────────────────────────────────
+// ─── Пятно привязанное к секции (Оригинальное с blur) ───────────────────────
 function SectionGlow({
   color, size = 400, top, left, opacity = 1,
 }: {
@@ -222,55 +153,38 @@ function SectionGlow({
 export default function Home() {
   return (
     <main className="relative min-h-screen text-white overflow-hidden selection:bg-blue-500/30">
-      <ParallaxParticles />
-
+      
       {/* ── 1. HERO — на весь экран ───────────────────────────────────────── */}
       <section
         className="relative w-full"
         style={{ height: "100dvh", zIndex: 1 }}
       >
-        {/* Расходящиеся круги (На самом дне) */}
         <RippleCircles />
 
-        {/* Заголовок + кубик + описание */}
         <motion.div
           initial="hidden"
           animate="visible"
           variants={staggerContainer}
-          // Делаем pointer-events-none для обертки, чтобы можно было кликать на фон 
-          // (но внутри включим pointer-events-auto)
           className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center pointer-events-none"
           style={{ zIndex: 2 }}
         >
-          {/* Контейнер для контента центрирован по вертикали и горизонтали */}
           <div className="pointer-events-auto flex flex-col items-center justify-center -mt-2">
             
-            {/* 1. ЗАГОЛОВОК */}
-            <motion.h1
-              variants={fadeInUp}
-              className="text-5xl md:text-7xl font-medium tracking-tight text-white drop-shadow-1xl"
-            >
+            <motion.h1 variants={fadeInUp} className="text-5xl md:text-7xl font-medium tracking-tight text-white drop-shadow-1xl">
               IT-инкубатор
             </motion.h1>
 
-            {/* 2. 3D КУБИК МЕЖДУ ТЕКСТОМ (Опускаем его ниже) */}
-            {/* Добавляем больший отступ сверху (mt-6/mt-8) и отрицательный снизу, если нужно приблизить текст */}
             <motion.div variants={fadeInUp} className="mt-8 mb-4 md:mt-12 md:mb-6">
               <SilverRubiksCube />
             </motion.div>
 
-            {/* 3. ОПИСАНИЕ */}
-            <motion.p
-              variants={fadeInUp}
-              className="text-gray-300 text-base md:text-lg leading-relaxed max-w-2xl drop-shadow-md mx-auto"
-            >
+            <motion.p variants={fadeInUp} className="text-gray-300 text-base md:text-lg leading-relaxed max-w-2xl drop-shadow-md mx-auto">
               Разрабатываем сайты, веб-приложения и ботов для ваших задач. Свежий взгляд,
               современные технологии и контроль качества под руководством опытных наставников.
             </motion.p>
           </div>
         </motion.div>
 
-        {/* Кнопка ~80% от верха (≈ середина между центром и низом) */}
         <motion.div
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -284,18 +198,12 @@ export default function Home() {
           </Link>
         </motion.div>
 
-        {/* Граница-маска: плавное угасание кругов и свечения к низу секции */}
         <div
           aria-hidden="true"
           style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: "40%",
+            position: "absolute", bottom: 0, left: 0, right: 0, height: "40%",
             background: "linear-gradient(to bottom, transparent 0%, rgba(10,10,15,0.7) 60%, #0a0a0f 100%)",
-            zIndex: 3,
-            pointerEvents: "none",
+            zIndex: 3, pointerEvents: "none",
           }}
         />
       </section>
@@ -308,23 +216,11 @@ export default function Home() {
         <SectionGlow color="rgba(99,102,241,0.20)" size={450} top="50%" left="25%" />
         <SectionGlow color="rgba(34,211,238,0.10)" size={300} top="30%" left="75%" opacity={0.6} />
 
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={imageReveal}
-          className="relative z-10"
-        >
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={imageReveal} className="relative z-10">
           <DashboardIllustration />
         </motion.div>
 
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-50px" }}
-          variants={staggerContainer}
-          className="space-y-6 relative z-10"
-        >
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-50px" }} variants={staggerContainer} className="space-y-6 relative z-10">
           <motion.h2 variants={fadeInUp} className="text-3xl md:text-4xl font-medium text-white leading-tight">
             Автоматизация <br /> бизнес-процессов
           </motion.h2>
@@ -337,12 +233,7 @@ export default function Home() {
             От личных кабинетов пользователей до сложных административных панелей.
           </motion.p>
           <Link href="/contacts">
-            <motion.button
-              variants={fadeInUp}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="group flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors mt-8"
-            >
+            <motion.button variants={fadeInUp} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="group flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors mt-8">
               Обсудить задачу
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </motion.button>
@@ -358,26 +249,14 @@ export default function Home() {
         <SectionGlow color="rgba(34,211,238,0.18)" size={500} top="50%" left="20%" />
         <SectionGlow color="rgba(56,189,248,0.10)" size={280} top="70%" left="70%" opacity={0.5} />
 
-        <motion.div
-          initial={{ opacity: 0, x: -30 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
-          className="relative z-10"
-        >
+        <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="relative z-10">
           <h2 className="text-4xl md:text-5xl font-medium text-white leading-tight">
             Готов <br />
             начать проект?
           </h2>
         </motion.div>
 
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={staggerContainer}
-          className="space-y-6 text-sm md:text-base text-gray-300 leading-relaxed relative z-10"
-        >
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer} className="space-y-6 text-sm md:text-base text-gray-300 leading-relaxed relative z-10">
           <motion.p variants={fadeInUp}>
             Приглашаем вас к сотрудничеству! Мы всегда открыты для новых вызовов и готовы взяться
             за разработку вашего продукта.
@@ -385,13 +264,8 @@ export default function Home() {
           <motion.p variants={fadeInUp}>
             Работая с нашим бизнес-инкубатором, вы вносите огромный вклад в развитие молодых талантов.
           </motion.p>
-          <Link href="/contacts">
-            <motion.button
-              variants={fadeInUp}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="group flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors mt-8 pt-4"
-            >
+          <Link href="/new-project">
+            <motion.button variants={fadeInUp} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="group flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors mt-8 pt-4">
               Перейти к созданию заявки
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </motion.button>
@@ -418,11 +292,7 @@ export default function Home() {
           Мы всегда открыты для новых идей. Если вам нужен сайт, приложение или есть классная
           задумка — давайте обсудим это!
         </p>
-        <motion.div
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          className="relative z-10"
-        >
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="relative z-10">
           <Link href="/contacts">
             <LiquidButton className="mt-4 px-10 py-4">
               Оставить заявку
