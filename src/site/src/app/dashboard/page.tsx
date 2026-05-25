@@ -65,7 +65,9 @@ export default function DashboardPage() {
 
         // Скачиваем данные по каждому ID паралелльно
         const fetchedOrders = await Promise.all(
-          orderIds.map(id => fetch(`/api/orders/read/${id}`).then(res => res.json()))
+          orderIds.map(id => 
+            fetch(`/api/orders/read/${id}`, { cache: "no-store" }).then(res => res.json())
+          )
         );
 
         // Отфильтровываем те, что вернулись с ошибкой (если заказ вдруг удален)

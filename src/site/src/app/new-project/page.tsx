@@ -77,7 +77,7 @@ export default function NewProjectPage() {
       }
 
       // Заказ успешно создан! Теперь скачаем свежие данные юзера (в них появится новый ID в orders_created)
-      const userRes = await fetch(`/api/users/read/${user.id}`);
+      const userRes = await fetch(`/api/users/read/${user.id}`, { cache: "no-store" });
       if (userRes.ok) {
         const updatedUser = await userRes.json();
         // Сохраняем пароль, так как read его не возвращает
