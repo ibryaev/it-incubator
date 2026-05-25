@@ -1,4 +1,3 @@
-// src/app/auth-provider.tsx
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
@@ -11,25 +10,35 @@ export type User = {
   last_name: string | null;
   role: string;
   passwordRaw?: string; 
-  avatar_url?: string | null;
+  avatar_url?: string | null; 
 };
 
 type AuthContextType = {
   user: User | null;
   login: (user: User) => void;
   logout: () => void;
+  isAuthLoading: boolean; // <-- Новое состояние
 };
 
-const AuthContext = createContext<AuthContextType>({ user: null, login: () => {}, logout: () => {} });
+const AuthContext = createContext<AuthContextType>({ 
+  user: null, 
+  login: () => {}, 
+  logout: () => {}, 
+  isAuthLoading: true 
+});
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true); // <-- По умолчанию грузимся
   const router = useRouter();
 
-  // При загрузке страницы достаем юзера из localStorage
   useEffect(() => {
     const stored = localStorage.getItem("app_user");
-    if (stored) setUser(JSON.parse(stored));
+    if (stored) {
+      setUser(JSON.parse(stored));
+    }
+    // Завершили проверку памяти
+    setIsAuthLoading(false);
   }, []);
 
   const login = (userData: User) => {
@@ -43,7 +52,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push("/login");
   };
 
-  return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, login, logout, isAuthLoading }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => useContext(AuthContext);

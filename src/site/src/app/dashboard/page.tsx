@@ -59,7 +59,8 @@ const roleTranslations: Record<string, string> = {
 };
 
 export default function DashboardPage() {
-  const { user, logout, login } = useAuth();
+  // Добавили isAuthLoading сюда
+  const { user, logout, login, isAuthLoading } = useAuth();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -73,23 +74,40 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!user) router.push("/login");
-  }, [user, router]);
+    // Ждем окончания загрузки из localStorage, и только если юзера НЕТ - кидаем на логин
+    if (!isAuthLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, isAuthLoading, router]);
 
-  if (!user) return null;
+  // Пока данные грузятся, показываем пустой экран (чтобы избежать моргания)
+  if (isAuthLoading || !user) return null;
 
   const displayedProjects = showAllProjects ? projectsData : projectsData.slice(0, 2);
 
+  // Улучшенная функция для аватарок, которая сохраняет query-параметры (?t=...)
+  const getAvatarSrc = (url: string) => {
+    if (url.startsWith('http')) return url;
+    
+    // Разделяем путь и параметры (кэш-бастер)
+    const [path, query] = url.split('?');
+    
+    let cleanUrl = path.startsWith('/') ? path : `/${path}`;
+    if (!cleanUrl.includes('avatars')) {
+      cleanUrl = `/avatars${cleanUrl}`;
+    }
+    
+    return `/it-incubator${cleanUrl}${query ? `?${query}` : ''}`;
+  };
+
   const handleStartEdit = (target: "name" | "email" | "password", currentVal: string) => {
     setEditTarget(target);
-    // Для пароля мы всегда начинаем с пустого поля при редактировании
     setTempValue(target === "password" ? "" : currentVal);
     setError("");
     setShowPassword(false);
   };
 
   const handleSave = async () => {
-    // 1. Проверка на изменения
     if (editTarget === "name" && tempValue.trim() === user.first_name) return setEditTarget(null);
     if (editTarget === "email" && tempValue.trim() === user.email) return setEditTarget(null);
     if (editTarget === "password" && !tempValue.trim()) return setEditTarget(null);
@@ -108,7 +126,7 @@ export default function DashboardPage() {
 
       if (editTarget === "name") {
         endpoint = "/api/users/update/names";
-        headerKey = "new_first_name"; 
+        headerKey = "new_first_name";
       } else if (editTarget === "email") {
         endpoint = "/api/users/update/email";
         headerKey = "new_email";
@@ -155,10 +173,7 @@ export default function DashboardPage() {
 
   const renderField = (label: string, target: "name" | "email" | "password", currentValue: string, isPassword = false) => {
     const isEditing = editTarget === target;
-    
     const actualValue = isEditing ? tempValue : (isPassword ? (user.passwordRaw || "") : currentValue);
-    
-    // Тип инпута зависит ТОЛЬКО от состояния showPassword и от того, пароль ли это.
     const inputType = isPassword && !showPassword ? "password" : "text";
 
     return (
@@ -184,40 +199,22 @@ export default function DashboardPage() {
           
           <div className="flex items-center gap-2 ml-2 shrink-0">
             {isPassword && (
-              <button 
-                type="button"
-                onClick={(e) => { e.preventDefault(); setShowPassword(!showPassword); }} 
-                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-              >
+              <button type="button" onClick={(e) => { e.preventDefault(); setShowPassword(!showPassword); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             )}
 
             {isEditing ? (
               <>
-                <button 
-                  type="button"
-                  onClick={async (e) => { e.preventDefault(); await handleSave(); }} 
-                  disabled={isUpdating} 
-                  className="p-2 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 transition-colors disabled:opacity-50"
-                >
+                <button type="button" onClick={async (e) => { e.preventDefault(); await handleSave(); }} disabled={isUpdating} className="p-2 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 transition-colors disabled:opacity-50">
                   <Check size={16} />
                 </button>
-                <button 
-                  type="button"
-                  onClick={(e) => { e.preventDefault(); setEditTarget(null); setError(""); }} 
-                  disabled={isUpdating} 
-                  className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors disabled:opacity-50"
-                >
+                <button type="button" onClick={(e) => { e.preventDefault(); setEditTarget(null); setError(""); }} disabled={isUpdating} className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors disabled:opacity-50">
                   <X size={16} />
                 </button>
               </>
             ) : (
-              <button 
-                type="button"
-                onClick={(e) => { e.preventDefault(); handleStartEdit(target, isPassword ? "" : currentValue); }} 
-                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-              >
+              <button type="button" onClick={(e) => { e.preventDefault(); handleStartEdit(target, isPassword ? "" : currentValue); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
                 <Pencil size={16} />
               </button>
             )}
@@ -226,12 +223,7 @@ export default function DashboardPage() {
 
         <AnimatePresence>
           {isEditing && error && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0, marginTop: 0 }} 
-              animate={{ opacity: 1, height: "auto", marginTop: 8 }} 
-              exit={{ opacity: 0, height: 0, marginTop: 0 }} 
-              className="overflow-hidden"
-            >
+            <motion.div initial={{ opacity: 0, height: 0, marginTop: 0 }} animate={{ opacity: 1, height: "auto", marginTop: 8 }} exit={{ opacity: 0, height: 0, marginTop: 0 }} className="overflow-hidden">
               <div className="text-[11px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-3">
                 {error}
               </div>
@@ -242,30 +234,11 @@ export default function DashboardPage() {
     );
   };
 
-  // Умная функция для создания правильной ссылки на аватарку
-  const getAvatarSrc = (url: string) => {
-    if (url.startsWith('http')) return url; // Если это полная ссылка (например, из Google)
-    
-    // 1. Добавляем слэш в начало, если его нет
-    let cleanUrl = url.startsWith('/') ? url : `/${url}`;
-    
-    // 2. Если бэкенд забыл указать папку avatars, добавляем её
-    if (!cleanUrl.includes('avatars')) {
-      cleanUrl = `/avatars${cleanUrl}`;
-    }
-    
-    // 3. Возвращаем итоговый путь с учетом подпапки сайта
-    return `/it-incubator${cleanUrl}`;
-  };
-
   return (
     <main className="relative min-h-screen text-white overflow-hidden flex flex-col pb-20">
       <GlowingBackground />
 
-      <motion.section
-        initial="hidden" animate="visible" variants={staggerContainer}
-        className="relative z-10 w-full max-w-5xl mx-auto px-6 pt-32"
-      >
+      <motion.section initial="hidden" animate="visible" variants={staggerContainer} className="relative z-10 w-full max-w-5xl mx-auto px-6 pt-32">
         <motion.h1 variants={fadeInUp} className="text-4xl md:text-5xl font-medium text-center mb-20 tracking-tight">
           Личный кабинет
         </motion.h1>
@@ -276,17 +249,12 @@ export default function DashboardPage() {
             <LogOut size={14} /> Выйти
           </button>
 
-          {/* АВАТАРКА */}
           <div 
             onClick={() => fileInputRef.current?.click()}
             className="group relative shrink-0 w-48 h-48 md:w-56 md:h-56 rounded-full bg-[#1A1A1E] flex items-center justify-center border border-white/5 shadow-2xl overflow-hidden cursor-pointer"
           >
             {user.avatar_url ? (
-              <img 
-                src={getAvatarSrc(user.avatar_url)}
-                alt="avatar" 
-                className="w-full h-full object-cover" 
-              />
+              <img src={getAvatarSrc(user.avatar_url)} alt="avatar" className="w-full h-full object-cover" />
             ) : (
               <User className="w-20 h-20 text-[#2A2A30]" strokeWidth={1} />
             )}
@@ -294,11 +262,18 @@ export default function DashboardPage() {
               <Camera className="w-6 h-6 text-white" />
               <span className="text-[9px] uppercase tracking-widest font-bold">Изменить</span>
             </div>
+            
+            {/* ИЗМЕНЕНИЯ ЗДЕСЬ: Добавляем ?t= при обновлении */}
             <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={async (e) => {
               const file = e.target.files?.[0]; if (!file) return;
               const formData = new FormData(); formData.append("file", file);
               const res = await fetch("/api/users/update/avatar", { method: "POST", headers: { "user_id": String(user.id) }, body: formData });
-              const data = await res.json(); if (res.ok) login({ ...user, avatar_url: data.avatar_url });
+              const data = await res.json(); 
+              if (res.ok) {
+                // Разбиваем кэш браузера, приклеивая текущее время к ссылке!
+                const newAvatar = data.avatar_url.split('?')[0] + `?t=${Date.now()}`;
+                login({ ...user, avatar_url: newAvatar });
+              }
             }} />
           </div>
 
