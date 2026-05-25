@@ -11,13 +11,15 @@ export type User = {
   role: string;
   passwordRaw?: string; 
   avatar_url?: string | null; 
+  orders_created?: number[]; 
+  orders_pinned?: number[]; 
 };
 
 type AuthContextType = {
   user: User | null;
   login: (user: User) => void;
   logout: () => void;
-  isAuthLoading: boolean; // <-- Новое состояние
+  isAuthLoading: boolean; 
 };
 
 const AuthContext = createContext<AuthContextType>({ 
@@ -29,7 +31,7 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true); // <-- По умолчанию грузимся
+  const [isAuthLoading, setIsAuthLoading] = useState(true); 
   const router = useRouter();
 
   useEffect(() => {
