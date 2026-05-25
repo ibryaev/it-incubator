@@ -108,7 +108,7 @@ export default function DashboardPage() {
 
       if (editTarget === "name") {
         endpoint = "/api/users/update/names";
-        headerKey = "new_first_name"; // ИСПРАВЛЕНО НА ПРАВИЛЬНЫЙ КЛЮЧ
+        headerKey = "new_first_name"; 
       } else if (editTarget === "email") {
         endpoint = "/api/users/update/email";
         headerKey = "new_email";
@@ -156,10 +156,6 @@ export default function DashboardPage() {
   const renderField = (label: string, target: "name" | "email" | "password", currentValue: string, isPassword = false) => {
     const isEditing = editTarget === target;
     
-    // ИСТИННАЯ ЛОГИКА ОТОБРАЖЕНИЯ:
-    // Если мы редактируем - показываем то, что печатают (tempValue).
-    // Если мы смотрим пароль - показываем НАСТОЯЩИЙ пароль (user.passwordRaw).
-    // Если мы смотрим обычное поле - показываем currentValue.
     const actualValue = isEditing ? tempValue : (isPassword ? (user.passwordRaw || "") : currentValue);
     
     // Тип инпута зависит ТОЛЬКО от состояния showPassword и от того, пароль ли это.
@@ -246,6 +242,22 @@ export default function DashboardPage() {
     );
   };
 
+  // Умная функция для создания правильной ссылки на аватарку
+  const getAvatarSrc = (url: string) => {
+    if (url.startsWith('http')) return url; // Если это полная ссылка (например, из Google)
+    
+    // 1. Добавляем слэш в начало, если его нет
+    let cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    
+    // 2. Если бэкенд забыл указать папку avatars, добавляем её
+    if (!cleanUrl.includes('avatars')) {
+      cleanUrl = `/avatars${cleanUrl}`;
+    }
+    
+    // 3. Возвращаем итоговый путь с учетом подпапки сайта
+    return `/it-incubator${cleanUrl}`;
+  };
+
   return (
     <main className="relative min-h-screen text-white overflow-hidden flex flex-col pb-20">
       <GlowingBackground />
@@ -264,12 +276,17 @@ export default function DashboardPage() {
             <LogOut size={14} /> Выйти
           </button>
 
+          {/* АВАТАРКА */}
           <div 
             onClick={() => fileInputRef.current?.click()}
             className="group relative shrink-0 w-48 h-48 md:w-56 md:h-56 rounded-full bg-[#1A1A1E] flex items-center justify-center border border-white/5 shadow-2xl overflow-hidden cursor-pointer"
           >
             {user.avatar_url ? (
-              <img src={user.avatar_url.startsWith('http') ? user.avatar_url : `/it-incubator${user.avatar_url}`} alt="avatar" className="w-full h-full object-cover" />
+              <img 
+                src={getAvatarSrc(user.avatar_url)}
+                alt="avatar" 
+                className="w-full h-full object-cover" 
+              />
             ) : (
               <User className="w-20 h-20 text-[#2A2A30]" strokeWidth={1} />
             )}
