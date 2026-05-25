@@ -7,47 +7,27 @@ import { LiquidButton } from "@/components/ui/liquid-button";
 import { DashboardIllustration } from "@/components/ui/dashboard-illustration";
 import dynamic from "next/dynamic";
 
-// Динамически подгружаем 3D-компонент, полностью отключая серверный рендеринг (SSR)
 const SilverRubiksCube = dynamic(
   () => import("@/components/ui/silver-rubiks-cube").then((mod) => mod.SilverRubiksCube),
   { ssr: false }
 );
 
-// ─── Анимации ─────────────────────────────────────────────────────────────────
 const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 30 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { 
-      duration: 0.6, 
-      ease: [0.22, 1, 0.36, 1] 
-    }
-  }
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } }
 };
 
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.12, delayChildren: 0.1 }
-  }
+  visible: { opacity: 1, transition: { staggerChildren: 0.12, delayChildren: 0.1 } }
 };
 
 const imageReveal: Variants = {
   hidden: { opacity: 0, scale: 0.9, y: 20 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    y: 0,
-    transition: { 
-      duration: 0.8, 
-      ease: "easeOut" as const 
-    }
-  }
+  visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" as const } }
 };
 
-// ─── Анимированные круги-волны из центра (Оптимизированные) ─────────────────
+// ─── АНИМИРОВАННЫЕ КРУГИ (Нативная CSS GPU Оптимизация) ─────────────────────
 const RIPPLE_COUNT = 8;
 const RIPPLE_DURATION = 8.0; 
 const RIPPLE_MAX_SIZE = 2000; 
@@ -56,29 +36,23 @@ function RippleRing({ index }: { index: number }) {
   const delay = index * (RIPPLE_DURATION / RIPPLE_COUNT);
 
   return (
-    <motion.div
+    <div
       aria-hidden="true"
       style={{
         position: "absolute",
         width: RIPPLE_MAX_SIZE,
         height: RIPPLE_MAX_SIZE,
         borderRadius: "50%",
-        // Сделали круги чуть-чуть потолще (5px вместо 3px) и чуть ярче
         border: "5px solid rgba(185, 171, 255, 0.6)", 
         top: "50%",
         left: "50%",
-        x: "-50%",
-        y: "-50%",
+        // Запускаем нативную CSS анимацию с идеальной синхронизацией GPU
+        animation: `rippleEffect ${RIPPLE_DURATION}s linear infinite`,
+        animationDelay: `${delay}s`,
+        // Начальное состояние до запуска анимации (чтобы не было вспышек при загрузке)
+        transform: "translate(-50%, -50%) scale(0)",
+        opacity: 0,
         willChange: "transform, opacity",
-      }}
-      initial={{ scale: 0, opacity: 0.7 }}
-      animate={{ scale: 1, opacity: 0 }}
-      transition={{
-        ease: "linear",
-        duration: RIPPLE_DURATION,
-        delay,
-        repeat: Infinity,
-        repeatDelay: 0,
       }}
     />
   );
@@ -91,7 +65,21 @@ function RippleCircles() {
       className="absolute inset-0 pointer-events-none"
       style={{ zIndex: 0, overflow: "hidden" }}
     >
-      {/* 1. Большое фоновое свечение (Сделали крупнее на мобилке: 600px вместо 400px, и увеличили блюр) */}
+      {/* Внедряем CSS-анимацию прямо в разметку для изоляции */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes rippleEffect {
+          0% {
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0.7;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 0;
+          }
+        }
+      `}} />
+
+      {/* 1. Большое фоновое свечение */}
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] md:w-[800px] md:h-[800px] rounded-full blur-[50px] md:blur-[60px]"
         style={{
@@ -99,7 +87,7 @@ function RippleCircles() {
         }}
       />
       
-      {/* 2. Среднее свечение (показываем только на ПК для богатства цвета) */}
+      {/* 2. Среднее свечение */}
       <div
         className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[480px] h-[480px] rounded-full blur-[32px]"
         style={{
@@ -107,7 +95,7 @@ function RippleCircles() {
         }}
       />
 
-      {/* 3. Яркая точка прямо за кубиком (Сделали крупнее на мобилке: 240px вместо 150px) */}
+      {/* 3. Яркая точка прямо за кубиком */}
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[240px] h-[240px] md:w-[290px] md:h-[290px] rounded-full blur-[28px] md:blur-[32px]"
         style={{
@@ -125,7 +113,7 @@ function RippleCircles() {
   );
 }
 
-// ─── Пятно привязанное к секции (Оригинальное с blur) ───────────────────────
+// ─── Пятно привязанное к секции ───────────────────────────────────────────
 function SectionGlow({
   color, size = 400, top, left, opacity = 1,
 }: {
@@ -152,7 +140,7 @@ function SectionGlow({
   );
 }
 
-// ─── Страница ─────────────────────────────────────────────────────────────────
+// ─── Страница (остальной код без изменений) ───────────────────────────────
 export default function Home() {
   return (
     <main className="relative min-h-screen text-white overflow-hidden selection:bg-blue-500/30">
@@ -188,7 +176,6 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Кнопка обсудить проект */}
         <motion.div
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
@@ -202,7 +189,6 @@ export default function Home() {
           </Link>
         </motion.div>
 
-        {/* ВОЗВРАЩАЕМ МАСКУ: Она скрыта на мобилках (hidden) и видна только на ПК (md:block) */}
         <div
           aria-hidden="true"
           className="hidden md:block absolute bottom-0 left-0 right-0 h-[40%] pointer-events-none"
