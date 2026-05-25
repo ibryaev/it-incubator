@@ -303,14 +303,23 @@ async def order_create(
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
+    user = User(**user)
 
     order = await methods.create_order(
         created_order.title,
         created_order.techspec,
-        user['id']
+        user.id
     )
     if "error" in order:
         raise HTTPException(403, order['error'])
+
+    user, err = await db.user_update(
+        user.id,
+        orders_created=user.orders_created + [order['id']]
+    )
+    if err:
+        return {"error": [err]}
+
     return order
 
 @router.get("/orders/read/{order_id}")
@@ -344,7 +353,7 @@ async def order_update_title(
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
-    if user['id'] != order['customer_id'] or user['status'] not in user_role_type[-1]:
+    if user['id'] != order['customer_id'] or user['role'] not in user_role_type[-1]:
         raise HTTPException(403, f"Только {user_role['customer']} и {user_role['admin']} могут переименовать заказ")
 
     updated_order = await methods.update_order_title(
@@ -374,7 +383,7 @@ async def order_update_techspec(
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
-    if user['id'] != order['customer_id'] or user['status'] not in user_role_type[-1]:
+    if user['id'] != order['customer_id'] or user['role'] not in user_role_type[-1]:
         raise HTTPException(403, f"Только {user_role['customer']} и {user_role['admin']} могут изменить ТЗ заказа")
 
     updated_order = await methods.update_order_techspec(
@@ -425,7 +434,7 @@ async def order_update_status(
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
-    if user['id'] != order['manager_id'] or user['status'] not in user_role_type[-1]:
+    if user['id'] != order['manager_id'] or user['role'] not in user_role_type[-1]:
         raise HTTPException(403, f"Только {user_role['manager']} и {user_role['admin']} могут изменить статус заказа")
 
     updated_order = await methods.update_order_status(
@@ -455,7 +464,7 @@ async def order_update_manager(
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
-    if user['status'] not in user_role_type[-1]:
+    if user['role'] not in user_role_type[-1]:
         raise HTTPException(403, f"Только {user_role['admin']} может изменить {user_role['manager']}а заказа")
 
     updated_order = await methods.update_order_manager(
@@ -470,7 +479,7 @@ async def order_update_manager(
 async def order_update_students(
     admin: UserLogin,
     order_id: int = Header(..., alias="order_id"),
-    new_students_pinned: list[int] = Header(..., alias="new_students_pinned")
+    new_students_pinned: list[int] = Header(None, alias="new_students_pinned")
 ) -> dict:
     """
     
@@ -485,7 +494,7 @@ async def order_update_students(
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
-    if user['id'] != order['manager_id'] or user['status'] not in user_role_type[-1]:
+    if user['id'] != order['manager_id'] or user['role'] not in user_role_type[-1]:
         raise HTTPException(403, f"Только {user_role['manager']} и {user_role['admin']} может список исполнителей, закреплённых за заказом")
 
     updated_order = await methods.update_order_students(
@@ -504,18 +513,26 @@ async def order_delete(
     """
     
     """
-    order = await methods.read_order(order_id)
-    if "error" in order:
-        raise HTTPException(403, order['error'])
-
     user = await methods.login_account(
         request.email,
         request.password
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
-    if user['status'] != user_role_type[-1]:
+    user = User(**user)
+    if user.role != user_role_type[-1]:
         raise HTTPException(403, f"Только {user_role['admin']} может удалить заказ")
+
+    order = await methods.read_order(order_id)
+    if "error" in order:
+        raise HTTPException(403, order['error'])
+
+    user, err = await db.user_update(
+        user.id,
+        orders_created=user.orders_created - [order['id']]
+    )
+    if err:
+        return {"error": [err]}
 
     result = await methods.delete_order(order_id)
     if "error" in result:
