@@ -1,13 +1,26 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import { MessageCircle, X, Maximize2, Minimize2, Send, Loader2, AlertCircle } from "lucide-react";
-import { GlassInput } from "./glass-input";
 
 type Message = {
   role: "user" | "assistant" | "error";
   content: string;
+};
+
+const fadeInUpAnimation: Variants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    transition: { duration: 0.6, ease: "easeOut" } 
+  },
+  exit: { 
+    opacity: 0, 
+    y: 20, 
+    transition: { duration: 0.4, ease: "easeIn" } 
+  }
 };
 
 export const ChatAssistant = () => {
@@ -21,7 +34,6 @@ export const ChatAssistant = () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Автоскролл вниз при новых сообщениях
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
@@ -32,22 +44,25 @@ export const ChatAssistant = () => {
     const userText = input.trim();
     setInput("");
     
-    // Добавляем сообщение пользователя
     const newMessages: Message[] = [...messages, { role: "user", content: userText }];
     setMessages(newMessages);
     setIsLoading(true);
 
     try {
-      // Оставляем только user и assistant для отправки на бэк (вырезаем системные ошибки из истории)
       const apiMessages = newMessages
         .filter(m => m.role !== "error")
         .map(m => ({ role: m.role, content: m.content }));
 
-      const res = await fetch("https://subbota.tech/api/chat/ask", { // <-- ЗАМЕНИ на правильный URL, если нужно
+      const res = await fetch("/api/chat/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: apiMessages }),
       });
+
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Сервер вернул некорректный формат данных (не JSON)");
+      }
 
       const data = await res.json();
 
@@ -55,11 +70,9 @@ export const ChatAssistant = () => {
         throw new Error(data.detail || "Произошла системная ошибка при обращении к ИИ");
       }
 
-      // Успешный ответ
       setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
 
     } catch (err: any) {
-      // КРАСИВЫЙ ВЫВОД ОШИБОК В ЧАТ (как ты и просил)
       setMessages(prev => [...prev, { 
         role: "error", 
         content: `Ошибка: ${err.message}. Попробуйте позже.` 
@@ -82,9 +95,10 @@ export const ChatAssistant = () => {
       <AnimatePresence>
         {!isOpen && (
           <motion.button
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.3 }}
             onClick={() => setIsOpen(true)}
             className="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-[#141419]/80 border border-white/10 backdrop-blur-xl shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:bg-white/[0.08] transition-colors"
           >
@@ -97,14 +111,14 @@ export const ChatAssistant = () => {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.95 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            variants={fadeInUpAnimation}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
             className={`fixed z-50 flex flex-col bg-[#0a0a0c]/90 backdrop-blur-2xl border border-white/10 overflow-hidden shadow-2xl transition-all duration-300 ${
               isFullScreen
-                ? "inset-4 md:inset-10 rounded-[30px]" // На весь экран (с отступами)
-                : "bottom-6 right-6 w-[380px] h-[600px] max-h-[85vh] rounded-[24px]" // Маленькое окно справа внизу
+                ? "inset-4 md:inset-10 rounded-[30px]"
+                : "bottom-6 right-6 w-[380px] h-[600px] max-h-[85vh] rounded-[24px]"
             }`}
           >
             {/* ШАПКА ЧАТА */}

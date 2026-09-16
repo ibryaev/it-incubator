@@ -16,6 +16,7 @@ API_DOMAIN: str = getenv("API_DOMAIN", "127.0.0.1")
 API_PORT: int = int(getenv("API_PORT", "8000"))
 API_PROTOCOL: str = getenv("API_PROTOCOL", "http")
 
+OPENROUTER_API_KEY: str = getenv("OPENROUTER_API_KEY")
 
 EMAIL_RESTRICTED_DOMAINS: tuple[str] = (
     "mozmail.com",
