@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Optional
 
-from config import user_role_type, user_spec_type
+from config import user_role_tuple, user_spec_tuple
 from singleton import get_db
 from config import EMAIL_RESTRICTED_DOMAINS, FIRST_NAME_MAX_LEN, LAST_NAME_MAX_LEN, PASSWORD_MIN_LEN, USER_ROLE_DEFAULT, BIO_MAX_LEN
 from argon2 import PasswordHasher
@@ -65,7 +65,7 @@ async def register_account(
         role = role.strip()
         if not role:
             errors.append("Пустая роль")
-        if role not in user_role_type:
+        if role not in user_role_tuple:
             errors.append(f"Неизвестная роль - {role}")
     if role is None:
         role = USER_ROLE_DEFAULT
@@ -74,7 +74,7 @@ async def register_account(
         old_spec = spec
         spec = []
         for s in old_spec:
-            if s in user_spec_type:
+            if s in user_spec_tuple:
                 s = s.strip()
                 if s:
                     spec.append(s)
@@ -379,7 +379,7 @@ async def update_account_spec(
         old_spec = spec
         spec = []
         for s in old_spec:
-            if s and s in user_spec_type:
+            if s and s in user_spec_tuple:
                 s = s.strip()
                 if s:
                     spec.append(s)

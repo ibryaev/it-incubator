@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Optional
 
 from config import (
-    order_status_type,
+    order_status_tuple,
     TITLE_MAX_LEN, TECHSPEC_MIN_LEN
 )
 from singleton import get_db
@@ -113,7 +113,7 @@ async def update_order_status(
     new_status = new_status.strip()
     if not new_status:
         return {"error": ["Пустой статус"]}
-    if new_status not in order_status_type:
+    if new_status not in order_status_tuple:
         return {"error": [f"Неизвестный статус - {new_status}"]}
 
     updated_order, err = await db.order_update(

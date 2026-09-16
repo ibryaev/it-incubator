@@ -7,6 +7,7 @@ from config import API_DOMAIN, API_PORT
 from database import DbQuery
 from singleton import set_db
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     db = await DbQuery.connect()

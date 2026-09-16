@@ -7,7 +7,7 @@ from os import makedirs
 from fastapi import APIRouter, HTTPException, Header, UploadFile, File
 
 from config import TITLE_MAX_LEN, TECHSPEC_MIN_LEN
-from config import user_role_type, user_role
+from config import user_role_tuple, user_role_text
 from models import User
 import methods
 from .users import UserLogin
@@ -104,8 +104,8 @@ async def order_update_title(
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
-    if user['id'] != order['customer_id'] or user['role'] not in user_role_type[-1]:
-        raise HTTPException(403, f"Только {user_role['customer']} и {user_role['admin']} могут переименовать заказ")
+    if user['id'] != order['customer_id'] or user['role'] not in user_role_tuple[-1]:
+        raise HTTPException(403, f"Только {user_role_text['customer']} и {user_role_text['admin']} могут переименовать заказ")
 
     updated_order = await methods.update_order_title(
         order_id,
@@ -139,8 +139,8 @@ async def order_update_techspec(
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
-    if user['id'] != order['customer_id'] or user['role'] not in user_role_type[-1]:
-        raise HTTPException(403, f"Только {user_role['customer']} и {user_role['admin']} могут изменить ТЗ заказа")
+    if user['id'] != order['customer_id'] or user['role'] not in user_role_tuple[-1]:
+        raise HTTPException(403, f"Только {user_role_text['customer']} и {user_role_text['admin']} могут изменить ТЗ заказа")
 
     updated_order = await methods.update_order_techspec(
         order_id,
@@ -213,8 +213,8 @@ async def order_update_status(
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
-    if user['id'] != order['manager_id'] or user['role'] not in user_role_type[-1]:
-        raise HTTPException(403, f"Только {user_role['manager']} и {user_role['admin']} могут изменить статус заказа")
+    if user['id'] != order['manager_id'] or user['role'] not in user_role_tuple[-1]:
+        raise HTTPException(403, f"Только {user_role_text['manager']} и {user_role_text['admin']} могут изменить статус заказа")
 
     updated_order = await methods.update_order_status(
         order_id,
@@ -248,8 +248,8 @@ async def order_update_manager(
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
-    if user['role'] not in user_role_type[-1]:
-        raise HTTPException(403, f"Только {user_role['admin']} может изменить {user_role['manager']}а заказа")
+    if user['role'] not in user_role_tuple[-1]:
+        raise HTTPException(403, f"Только {user_role_text['admin']} может изменить {user_role_text['manager']}а заказа")
 
     updated_order = await methods.update_order_manager(
         order_id,
@@ -283,8 +283,8 @@ async def order_update_students(
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
-    if user['id'] != order['manager_id'] or user['role'] not in user_role_type[-1]:
-        raise HTTPException(403, f"Только {user_role['manager']} и {user_role['admin']} может список исполнителей, закреплённых за заказом")
+    if user['id'] != order['manager_id'] or user['role'] not in user_role_tuple[-1]:
+        raise HTTPException(403, f"Только {user_role_text['manager']} и {user_role_text['admin']} может список исполнителей, закреплённых за заказом")
 
     updated_order = await methods.update_order_students(
         order_id,
@@ -315,8 +315,8 @@ async def order_delete(
     if "error" in user:
         raise HTTPException(403, user['error'])
     user = User(**user)
-    if user.role != user_role_type[-1]:
-        raise HTTPException(403, f"Только {user_role['admin']} может удалить заказ")
+    if user.role != user_role_tuple[-1]:
+        raise HTTPException(403, f"Только {user_role_text['admin']} может удалить заказ")
 
     order = await methods.read_order(order_id)
     if "error" in order:
