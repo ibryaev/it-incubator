@@ -38,7 +38,7 @@ export default function LoginPage() {
 
     try {
       // 1. Изменен URL на login
-      const res = await fetch("https://subbota.tech/api/users/login", {
+      const res = await fetch("/api/users/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // 2. В теле передаем только то, что ждет UserLogin (email и password)
