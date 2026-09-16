@@ -11,7 +11,7 @@ export const DashboardIllustration = () => {
       {/* 1. СТАТИЧНЫЙ СЛОЙ (Связи и ноды) */}
       <div className="absolute inset-0 z-10 translate-y-32">
         <Image 
-          src="/it-incubator/assets/dashboard-mockup.png" 
+          src="/assets/dashboard-mockup.png" 
           alt="Dashboard Connections" 
           fill 
           sizes="(max-width: 768px) 100vw, 50vw" // Подсказка для оптимизатора Next.js
@@ -31,7 +31,7 @@ export const DashboardIllustration = () => {
         className="absolute inset-0 z-20"
       >
         <Image 
-          src="/it-incubator/assets/dashboard-mockup-fly.png" 
+          src="/assets/dashboard-mockup-fly.png" 
           alt="Dashboard UI" 
           fill 
           sizes="(max-width: 768px) 100vw, 50vw" // Подсказка для оптимизатора Next.js
