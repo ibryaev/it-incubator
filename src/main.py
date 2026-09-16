@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from uvicorn import run
 from contextlib import asynccontextmanager
 
-from api import router_users, router_orders
+from api import router_users, router_orders, chat
 from config import API_DOMAIN, API_PORT
 from database import DbQuery
 from singleton import set_db
@@ -20,6 +20,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.include_router(router_users)
 app.include_router(router_orders)
+app.include_router(chat.router)
 
 if __name__ == "__main__":
     run("main:app", host=API_DOMAIN, port=API_PORT, reload=True)
