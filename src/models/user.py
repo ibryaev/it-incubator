@@ -1,6 +1,12 @@
+from __future__ import annotations
 from datetime import datetime
 from typing import Optional
+from dataclasses import dataclass
 
+from utils import datetime_now
+
+
+@dataclass(frozen=True)
 class User:
     def __init__(
         self,
@@ -28,7 +34,7 @@ class User:
         self.spec=spec
         self.orders_created=orders_created
         self.orders_pinned=orders_pinned
-        self.date_reg=date_reg or datetime.now()
+        self.date_reg=date_reg or datetime_now()
 
     @property
     def full_name(self) -> str:

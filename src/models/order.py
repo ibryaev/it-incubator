@@ -1,6 +1,12 @@
+from __future__ import annotations
 from datetime import datetime
 from typing import Optional
+from dataclasses import dataclass
 
+from utils import datetime_now
+
+
+@dataclass(frozen=True)
 class Order:
     def __init__(
         self,
@@ -22,4 +28,4 @@ class Order:
         self.manager_id=manager_id
         self.status=status
         self.students_pinned=students_pinned
-        self.date_reg=date_reg or datetime.now()
+        self.date_reg=date_reg or datetime_now()

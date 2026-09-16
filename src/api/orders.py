@@ -1,18 +1,21 @@
-from fastapi import APIRouter, HTTPException, Header, UploadFile, File
-
+from __future__ import annotations
 from pydantic import BaseModel, Field
 from typing import Optional
+from shutil import copyfileobj
+from os import makedirs
 
-import shutil
-import os
+from fastapi import APIRouter, HTTPException, Header, UploadFile, File
 
-from config import *
-from utils import user_role_type, user_role
-from utils.types import User
+from config import TITLE_MAX_LEN, TECHSPEC_MIN_LEN
+from config import user_role_type, user_role
+from models import User
 import methods
 from .users import UserLogin
+from singleton import get_db
+
 
 router = APIRouter()
+
 
 class OrderCreate(BaseModel):
     title: str      = Field(..., max_length=TITLE_MAX_LEN)
@@ -31,6 +34,8 @@ async def order_create(
     :param new_order: Данные создаваемого заказа. В формате :class:`OrderCreate`.
     :return: В случае неуспеха вернёт ошибку 403. Иначе - данные созданного заказа.
     """
+    db = get_db()
+
     user = await methods.login_account(
         customer.email,
         customer.password
@@ -159,6 +164,8 @@ async def order_update_preview(
     :param file: Новая обложкка заказа.
     :return: В случае неуспеха вернёт ошибку 403. Иначе - данные заказа, с обновлёнными данными.
     """
+    db = get_db()
+
     user = await methods.login_account(
         request.email,
         request.password
@@ -166,11 +173,11 @@ async def order_update_preview(
     if "error" in user:
         raise HTTPException(403, user['error'])
 
-    os.makedirs("src/site/public/previews", exist_ok=True)          # Хардкод
+    makedirs("src/site/public/previews", exist_ok=True)          # Хардкод
     file_path = f"src/site/public/previews/order_{order_id}.jpg"    # Хардкод
     
     with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        copyfileobj(file.file, buffer)
         
     url = f"/previews/order_{order_id}.jpg"
 
@@ -299,6 +306,8 @@ async def order_delete(
     :param request: Данные человека, кому принадлежит заказ. В формате :class:`.users.UserLogin`.
     :return: В случае успеха возвращает словарь :code:`{"result": True/False}`. Иначе: :code:`{"error": [ошибк(а/и)]}`.
     """
+    db = get_db()
+
     user = await methods.login_account(
         request.email,
         request.password

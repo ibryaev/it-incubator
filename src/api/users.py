@@ -1,22 +1,26 @@
-from fastapi import APIRouter, HTTPException, Header, UploadFile, File
 
+from __future__ import annotations
 from pydantic import BaseModel, Field
 from typing import Optional
+from shutil import copyfileobj
+from os import makedirs
 
-import shutil
-import os
+from fastapi import APIRouter, HTTPException, Header, UploadFile, File
 
-from config import *
+from config import FIRST_NAME_MAX_LEN, LAST_NAME_MAX_LEN, USER_ROLE_DEFAULT, PASSWORD_MIN_LEN, BIO_MAX_LEN
 import methods
+from singleton import get_db
+
 
 router = APIRouter()
+
 
 class UserRegister(BaseModel):
     email: str
     password: str
     first_name: str             = Field(..., max_length=FIRST_NAME_MAX_LEN)
     last_name: Optional[str]    = Field(None, max_length=LAST_NAME_MAX_LEN)
-    role: Optional[str]         = ROLE_DEFAULT
+    role: Optional[str]         = USER_ROLE_DEFAULT
     spec: Optional[list[str]]   = None
 
 class UserLogin(BaseModel):
@@ -203,11 +207,13 @@ async def user_update_avatar(
     user_id: int = Header(..., alias="user_id"),
     file: Optional[UploadFile] = File(...)
 ):
-    os.makedirs("src/site/public/avatars", exist_ok=True)
+    db = get_db()
+
+    makedirs("src/site/public/avatars", exist_ok=True)
     file_path = f"src/site/public/avatars/user_{user_id}.jpg"
     
     with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        copyfileobj(file.file, buffer)
         
     url = f"/avatars/user_{user_id}.jpg"
 

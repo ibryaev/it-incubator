@@ -1,36 +1,18 @@
+from __future__ import annotations
+from typing import Optional, Tuple
+
 from psycopg import AsyncConnection, sql
 from psycopg.rows import dict_row
 from psycopg.errors import UndefinedColumn
 from psycopg.types.enum import register_enum, EnumInfo
 
-from enum import Enum
-from typing import Optional, Tuple
 
-import config as cfg
-from utils.types import *
-
-class UserRole(str, Enum):
-    customer = "customer"
-    student = "student"
-    manager = "manager"
-    admin = "admin"
-
-class UserSpec(str, Enum):
-    frontend = "frontend"
-    backend = "backend"
-    fullstack = "fullstack"
-    analytic = "analytic"
-    tester = "tester"
-    designer = "designer"
-    devops = "devops"
-    other = "other"
-
-class OrderStatus(str, Enum):
-    created = "created"
-    taken = "taken"
-    testing = "testing"
-    done = "done"
-    canceled = "canceled"
+from config import (
+    DB_HOST, DB_DBNAME, DB_PORT, DB_USER, DB_PASSWORD,
+    USER_ROLE_DEFAULT
+)
+from typedefs import UserRole, UserSpec, OrderStatus
+from models import User, Order
 
 
 class DbQuery():
@@ -39,11 +21,11 @@ class DbQuery():
 
     async def connect(self):
         self.conn = await AsyncConnection.connect(
-            host        = cfg.DB_HOST,
-            dbname      = cfg.DB_DBNAME,
-            port        = cfg.DB_PORT,
-            user        = cfg.DB_USER,
-            password    = cfg.DB_PASSWORD,
+            host        = DB_HOST,
+            dbname      = DB_DBNAME,
+            port        = DB_PORT,
+            user        = DB_USER,
+            password    = DB_PASSWORD,
             row_factory = dict_row
         )
 
@@ -96,7 +78,7 @@ class DbQuery():
                     VALUES (%s, %s, %s, %s, %s, %s)
                     RETURNING *
                     """,
-                    (email, password, first_name, last_name, role or cfg.ROLE_DEFAULT, spec)
+                    (email, password, first_name, last_name, role or USER_ROLE_DEFAULT, spec)
                 )
                 new_user = await cur.fetchone()
                 if new_user is None:

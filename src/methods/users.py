@@ -1,7 +1,9 @@
+from __future__ import annotations
 from typing import Optional
-from utils import user_role_type, user_spec_type
-from database import *
-from config import *
+
+from config import user_role_type, user_spec_type
+from singleton import get_db
+from config import EMAIL_RESTRICTED_DOMAINS, FIRST_NAME_MAX_LEN, LAST_NAME_MAX_LEN, PASSWORD_MIN_LEN, USER_ROLE_DEFAULT, BIO_MAX_LEN
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
@@ -26,6 +28,7 @@ async def register_account(
     :param spec: Список специализаций пользователя. Исходя из списка :data:`src.utils.utils.user_spec_type`.
     :return: В случае успеха возвращает словарь с данными пользователя. Иначе: :code:`{"error": [ошибк(а/и)]}`.
     """
+    db = get_db()
     errors: list[str] = []
 
     email = email.lower().strip()
@@ -65,7 +68,7 @@ async def register_account(
         if role not in user_role_type:
             errors.append(f"Неизвестная роль - {role}")
     if role is None:
-        role = ROLE_DEFAULT
+        role = USER_ROLE_DEFAULT
 
     if spec:
         old_spec = spec
@@ -106,6 +109,8 @@ async def login_account(
     :param password: Пароль к учётной записи.
     :return: В случае успеха возвращает словарь с данными пользователя. Иначе: :code:`{"error": [ошибк(а/и)]}`.
     """
+    db = get_db()
+
     email = email.lower().strip()
     if not email:
         return {"error": ["Эл. почта должна быть заполнена"]}
@@ -152,6 +157,8 @@ async def read_account(
     :param user_id: UID искомой учётной записи.
     :return: В случае успеха возвращает словарь с данными учётной записи. Иначе: :code:`{"error": [ошибк(а/и)]}`.
     """
+    db = get_db()
+
     user, err = await db.user_read(id=user_id)
     if err:
         return {"error": [err]}
@@ -176,6 +183,8 @@ async def search_accounts(
     :param spec: Список специализаций пользователя. Исходя из списка :data:`src.utils.utils.user_spec_type`.
     :return: В случае успеха возвращает словарь с данными пользователя. Иначе: :code:`{"error": [ошибк(а/и)]}`.
     """
+    db = get_db()
+
     searches = {}
     if email:
         searches['email'] = email.strip()
@@ -211,6 +220,8 @@ async def update_account_email(
     :param user_id: UID учётной записи, чьи параметры подлежат обновлению.
     :param new_email: Новая эл. почта.
     """
+    db = get_db()
+
     new_email = new_email.lower().strip()
     if not new_email:
         return {"error": ["Эл. почта должна быть заполнена"]}
@@ -237,6 +248,8 @@ async def update_account_password(
     :param user_id: UID учётной записи, чьи параметры подлежат обновлению.
     :param new_password: Новый пароль.
     """
+    db = get_db()
+
     user, err = await db.user_read(id=user_id)
     if err:
         return {"error": [err]}
@@ -277,6 +290,8 @@ async def update_account_names(
     :param new_first_name: Новое имя.
     :param new_last_name: Новая фамилия.
     """
+    db = get_db()
+
     if (new_first_name is None and new_last_name is None) or (not new_first_name.strip() and not new_last_name.strip()):
         return {"error": ["Нужно внести хоть какие-то изменения"]}
 
@@ -327,6 +342,8 @@ async def update_account_bio(
     :param new_bio: Новое описание.
     :return: В случае успеха возвращает словарь с уже обновлёнными данными пользователя. Иначе: :code:`{"error": [ошибк(а/и)]}`.
     """
+    db = get_db()
+
     if new_bio:
         new_bio = new_bio.strip()
         if not new_bio:
@@ -356,6 +373,8 @@ async def update_account_spec(
     :param rewrite: Если :code:`False`, то прибавит с текущему списку специализаций пользователя новые, данные в параметре :code:`spec`. Иначе совершит перезапись.
     :return: В случае успеха возвращает словарь с уже обновлёнными данными пользователя. Иначе: :code:`{"error": [ошибк(а/и)]}`.
     """
+    db = get_db()
+
     if spec:
         old_spec = spec
         spec = []
@@ -398,6 +417,8 @@ async def delete_account(
     :param user_id: UID удаляемой учётной записи.
     :return: В случае успеха возвращает словарь :code:`{"result": True/False}`. Иначе: :code:`{"error": [ошибк(а/и)]}`.
     """
+    db = get_db()
+
     result, err = await db.user_delete(user_id)
     if err:
         return {"error": [err]}

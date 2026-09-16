@@ -1,7 +1,12 @@
+from __future__ import annotations
 from typing import Optional
-from utils import order_status_type
-from database import *
-from config import *
+
+from config import (
+    order_status_type,
+    TITLE_MAX_LEN, TECHSPEC_MIN_LEN
+)
+from singleton import get_db
+
 
 async def create_order(
     title: str,
@@ -11,6 +16,7 @@ async def create_order(
     """
     
     """
+    db = get_db()
     errors = []
 
     title = title.strip()
@@ -40,6 +46,8 @@ async def read_order(
     """
     
     """
+    db = get_db()
+
     order, err = await db.order_read(id=order_id)
     if err:
         return {"error": [err]}
@@ -54,6 +62,8 @@ async def update_order_title(
     """
     
     """
+    db = get_db()
+
     new_title = new_title.strip()
     if not new_title:
         return {"error": ["Пустое название"]}
@@ -75,6 +85,8 @@ async def update_order_techspec(
     """
     
     """
+    db = get_db()
+
     new_techspec = new_techspec.strip()
     if not new_techspec:
         return {"error": ["Пустое техническое задание"]}
@@ -96,6 +108,8 @@ async def update_order_status(
     """
     
     """
+    db = get_db()
+
     new_status = new_status.strip()
     if not new_status:
         return {"error": ["Пустой статус"]}
@@ -117,6 +131,8 @@ async def update_order_manager(
     """
     
     """
+    db = get_db()
+
     _, err = await db.user_read(id=new_manager_id)
     if err:
         return {"error": [err]}
@@ -136,6 +152,8 @@ async def update_order_students(
     """
     
     """
+    db = get_db()
+
     for student_id in new_students_pinned:
         _, err = await db.user_read(id=student_id)
         if err:
@@ -155,6 +173,8 @@ async def delete_order(
     """
     
     """
+    db = get_db()
+
     result, err = await db.order_delete(order_id)
     if err:
         return {"error": [err]}
