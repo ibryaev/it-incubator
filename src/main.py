@@ -3,11 +3,14 @@ from uvicorn import run
 from contextlib import asynccontextmanager
 
 from api import router_users, router_orders
-from config import *
+from config import API_DOMAIN, API_PORT
+from database import DbQuery
+from singleton import set_db
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await db.connect()
+    db = await DbQuery.connect()
+    set_db(db)
     print(1)
     yield
     if db.conn:

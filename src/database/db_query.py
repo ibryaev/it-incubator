@@ -16,11 +16,12 @@ from models import User, Order
 
 
 class DbQuery():
-    def __init__(self):
-        self.conn = None
+    def __init__(self, conn: AsyncConnection) -> None:
+        self.conn=conn
 
-    async def connect(self):
-        self.conn = await AsyncConnection.connect(
+    @classmethod
+    async def connect(cls) -> DbQuery:
+        conn = await AsyncConnection.connect(
             host        = DB_HOST,
             dbname      = DB_DBNAME,
             port        = DB_PORT,
@@ -29,12 +30,14 @@ class DbQuery():
             row_factory = dict_row
         )
 
-        role_info = await EnumInfo.fetch(self.conn, "user_role_type")
-        spec_info = await EnumInfo.fetch(self.conn, "user_spec_type")
-        status_info = await EnumInfo.fetch(self.conn, "order_status_type")
-        register_enum(role_info, self.conn, UserRole)
-        register_enum(spec_info, self.conn, UserSpec)
-        register_enum(status_info, self.conn, OrderStatus)
+        role_info = await EnumInfo.fetch(conn, "user_role_type")
+        spec_info = await EnumInfo.fetch(conn, "user_spec_type")
+        status_info = await EnumInfo.fetch(conn, "order_status_type")
+        register_enum(role_info, conn, UserRole)
+        register_enum(spec_info, conn, UserSpec)
+        register_enum(status_info, conn, OrderStatus)
+
+        return cls(conn)
 
     #####################
     #   Таблица users   #
