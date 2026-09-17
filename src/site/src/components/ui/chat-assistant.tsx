@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useAuth } from "@/app/auth-provider";
 import {
   MessageCircle,
   X,
@@ -34,6 +35,7 @@ const fadeInUpAnimation: Variants = {
 };
 
 export const ChatAssistant = () => {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [input, setInput] = useState("");
@@ -75,7 +77,12 @@ export const ChatAssistant = () => {
       const res = await fetch("/api/chat/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: apiMessages }),
+        body: JSON.stringify({
+            messages: apiMessages,
+            credentials: user?.passwordRaw
+                ? { email: user.email, password: user.passwordRaw }
+                : null,
+            }),
       });
 
       const contentType = res.headers.get("content-type");
