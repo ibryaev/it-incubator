@@ -2,7 +2,17 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence, Variants } from "framer-motion";
-import { MessageCircle, X, Maximize2, Minimize2, Send, Loader2, AlertCircle } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import {
+  MessageCircle,
+  X,
+  Maximize2,
+  Minimize2,
+  ArrowUp,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 
 type Message = {
   role: "user" | "assistant" | "error";
@@ -11,16 +21,16 @@ type Message = {
 
 const fadeInUpAnimation: Variants = {
   hidden: { opacity: 0, y: 30 },
-  visible: { 
-    opacity: 1, 
-    y: 0, 
-    transition: { duration: 0.6, ease: "easeOut" } 
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: "easeOut" },
   },
-  exit: { 
-    opacity: 0, 
-    y: 20, 
-    transition: { duration: 0.4, ease: "easeIn" } 
-  }
+  exit: {
+    opacity: 0,
+    y: 20,
+    transition: { duration: 0.4, ease: "easeIn" },
+  },
 };
 
 export const ChatAssistant = () => {
@@ -29,29 +39,38 @@ export const ChatAssistant = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Привет! Я ИИ-помощник инкубатора. Чем могу помочь?" }
+    { role: "assistant", content: "Привет! Я ИИ-помощник инкубатора. Чем могу помочь?" },
   ]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
+
+  // Авторастягивание поля ввода (как в Qwen Studio)
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+  }, [input]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
     const userText = input.trim();
     setInput("");
-    
+
     const newMessages: Message[] = [...messages, { role: "user", content: userText }];
     setMessages(newMessages);
     setIsLoading(true);
 
     try {
       const apiMessages = newMessages
-        .filter(m => m.role !== "error")
-        .map(m => ({ role: m.role, content: m.content }));
+        .filter((m) => m.role !== "error")
+        .map((m) => ({ role: m.role, content: m.content }));
 
       const res = await fetch("/api/chat/ask", {
         method: "POST",
@@ -70,13 +89,12 @@ export const ChatAssistant = () => {
         throw new Error(data.detail || "Произошла системная ошибка при обращении к ИИ");
       }
 
-      setMessages(prev => [...prev, { role: "assistant", content: data.reply }]);
-
+      setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
     } catch (err: any) {
-      setMessages(prev => [...prev, { 
-        role: "error", 
-        content: `Ошибка: ${err.message}. Попробуйте позже.` 
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: "error", content: `Ошибка: ${err.message}. Попробуйте позже.` },
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -88,6 +106,8 @@ export const ChatAssistant = () => {
       handleSend();
     }
   };
+
+  const canSend = !!input.trim() && !isLoading;
 
   return (
     <>
@@ -144,21 +164,25 @@ export const ChatAssistant = () => {
             <div className="flex-1 overflow-y-auto p-5 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
               {messages.map((msg, idx) => (
                 <div key={idx} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed ${
-                      msg.role === "user"
-                        ? "bg-purple-600/20 border border-purple-500/20 text-white rounded-br-none"
-                        : msg.role === "error"
-                        ? "bg-red-500/10 border border-red-500/20 text-red-200 w-full flex gap-3 items-start"
-                        : "bg-white/[0.04] border border-white/5 text-gray-200 rounded-bl-none"
-                    }`}
-                  >
-                    {msg.role === "error" && <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />}
-                    <div className="whitespace-pre-wrap">{msg.content}</div>
-                  </div>
+                  {msg.role === "error" ? (
+                    <div className="max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed bg-red-500/10 border border-red-500/20 text-red-200 flex gap-3 items-start">
+                      <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+                      <div>{msg.content}</div>
+                    </div>
+                  ) : msg.role === "user" ? (
+                    <div className="max-w-[85%] p-4 rounded-2xl rounded-br-none text-sm leading-relaxed bg-purple-600/20 border border-purple-500/20 text-white whitespace-pre-wrap">
+                      {msg.content}
+                    </div>
+                  ) : (
+                    <div className="max-w-[85%] p-4 rounded-2xl rounded-bl-none text-sm leading-relaxed bg-white/[0.04] border border-white/5 text-gray-200">
+                      <div className="chat-markdown">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
-              
+
               {/* Лоадер при ожидании ответа */}
               {isLoading && (
                 <div className="flex justify-start">
@@ -171,23 +195,35 @@ export const ChatAssistant = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* ПОЛЕ ВВОДА */}
+            {/* ПОЛЕ ВВОДА (в стиле Qwen Studio) */}
             <div className="p-4 bg-white/[0.02] border-t border-white/5">
-              <div className="relative">
+              <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2 transition-colors focus-within:border-purple-500/50 focus-within:bg-white/[0.05]">
                 <textarea
+                  ref={textareaRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Спросите что-нибудь..."
-                  className="w-full pl-5 pr-14 py-4 rounded-xl bg-white/[0.03] border border-white/10 text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 focus:bg-white/[0.05] transition-all resize-none overflow-hidden h-[54px]"
                   rows={1}
+                  className="flex-1 bg-transparent py-1.5 text-white text-sm placeholder:text-gray-500 focus:outline-none resize-none overflow-y-auto max-h-32"
                 />
                 <button
                   onClick={handleSend}
-                  disabled={isLoading || !input.trim()}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 bg-white/5 hover:bg-white/10 text-white rounded-lg disabled:opacity-50 transition-colors"
+                  disabled={!canSend}
+                  title="Отправить"
+                  className={`shrink-0 h-9 w-9 flex items-center justify-center rounded-full transition-all duration-200 ${
+                    isLoading
+                      ? "bg-white/10 text-gray-400 cursor-wait"
+                      : canSend
+                      ? "bg-white text-black hover:bg-purple-200 active:scale-95 shadow-[0_0_12px_rgba(255,255,255,0.25)]"
+                      : "bg-white/10 text-gray-500 cursor-not-allowed"
+                  }`}
                 >
-                  <Send className="w-4 h-4" />
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ArrowUp className="w-4 h-4" strokeWidth={2.5} />
+                  )}
                 </button>
               </div>
             </div>
