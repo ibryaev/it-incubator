@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from utils import datetime_now
 
 
-@dataclass(frozen=True)
+@dataclass
 class Order:
     def __init__(
         self,
