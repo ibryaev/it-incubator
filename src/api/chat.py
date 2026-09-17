@@ -56,7 +56,7 @@ async def chat_ask(request: ChatRequest) -> dict:
 
     # llama-3 бесплатная на OpenRouter для тестов, потом сменить на gemini-3.8-flash
     payload = {
-        "model": "google/gemini-2.5-flash",
+        "model": "qwen/qwen3.8-flash",
         "messages": payload_messages
     }
 
