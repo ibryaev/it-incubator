@@ -3,8 +3,8 @@ from enum import Enum
 
 
 class OrderStatus(str, Enum):
-    CREATED = "created"
-    TAKEN = "taken"
-    TESTING = "testing"
-    DONE = "done"
-    CANCELED = "canceled"
+    created: str = "created"
+    taken: str = "taken"
+    testings: str = "testing"
+    done: str = "done"
+    canceled: str = "canceled"

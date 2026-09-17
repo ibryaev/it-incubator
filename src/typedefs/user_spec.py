@@ -3,11 +3,11 @@ from enum import Enum
 
 
 class UserSpec(str, Enum):
-    FRONTEND: str = 'frontend'
-    BACKEND = "backend"
-    FULLSTACK = "fullstack"
-    ANALYTIC = "analytic"
-    TESTER = "tester"
-    DESIGNER = "designer"
-    DEVOPS = "devops"
-    OTHER = "other"
+    frontend: str = 'frontend'
+    backend: str = "backend"
+    fullstack: str = "fullstack"
+    analytic: str = "analytic"
+    tester: str = "tester"
+    designer: str = "designer"
+    devops: str = "devops"
+    other: str = "other"

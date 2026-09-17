@@ -31,69 +31,69 @@ LAST_NAME_MAX_LEN: int = 64 # По умолчанию 64
 """Максимальная длинна фамилии"""
 BIO_MAX_LEN: int = 384 # По умолчанию 384
 """Максимальная длина \"О себе\""""
-USER_ROLE_DEFAULT: str = UserRole.CUSTOMER # По умолчанию 'customer'
+USER_ROLE_DEFAULT: str = UserRole.customer # По умолчанию 'customer'
 """Роль по умолчанию у новозарегистрированного пользователя"""
 TITLE_MAX_LEN: int = 192 # По умолчанию 192
 """Максимальная длинна названия заказа"""
 TECHSPEC_MIN_LEN: int = 128 # По умолчанию 128
 """Максимальная длинна технического задания заказа"""
-ORDER_STATUS_DEFAULT: str = OrderStatus.CREATED # По умолчанию 'created'
+ORDER_STATUS_DEFAULT: str = OrderStatus.created # По умолчанию 'created'
 """Статус заказа по умолчанию"""
 ZONEINFO_DEFAULT: ZoneInfo = ZoneInfo('Europe/Moscow') # По умолчанию 'Europe/Moscow'
 """Часовой пояс по умолчанию"""
 
 
 user_role_tuple: tuple[str] = (
-    UserRole.CUSTOMER,
-    UserRole.STUDENT,
-    UserRole.MANAGER,
-    UserRole.ADMIN
+    UserRole.customer,
+    UserRole.student,
+    UserRole.manager,
+    UserRole.admin
 )
 """Список всех ролей, доступных для пользователей"""
 user_role_text: dict[str, str] = {
-    UserRole.CUSTOMER: "заказчик",
-    UserRole.STUDENT:  "студент",
-    UserRole.MANAGER:  "менеджер",
-    UserRole.ADMIN:    "администратор"
+    UserRole.customer: "заказчик",
+    UserRole.student:  "студент",
+    UserRole.manager:  "менеджер",
+    UserRole.admin:    "администратор"
 }
 """Название каждой роли на русском языке"""
 
 user_spec_tuple: tuple[str] = (
-    UserSpec.FRONTEND,
-    UserSpec.BACKEND,
-    UserSpec.FULLSTACK,
-    UserSpec.ANALYTIC,
-    UserSpec.TESTER,
-    UserSpec.DESIGNER,
-    UserSpec.DEVOPS,
-    UserSpec.OTHER
+    UserSpec.frontend,
+    UserSpec.backend,
+    UserSpec.fullstack,
+    UserSpec.analytic,
+    UserSpec.tester,
+    UserSpec.designer,
+    UserSpec.devops,
+    UserSpec.other
 )
 """Список всех специализаций, доступных для пользователей"""
 user_spec_text: dict[str, str] = {
-    UserSpec.FRONTEND:  "фронтенд",
-    UserSpec.BACKEND:   "бэкенд",
-    UserSpec.FULLSTACK: "фуллстек",
-    UserSpec.ANALYTIC:  "аналитик",
-    UserSpec.TESTER:    "тестировщик",
-    UserSpec.DESIGNER:  "дизайнер",
-    UserSpec.DEVOPS:    "девопс",
-    UserSpec.OTHER:     "другое"
+    UserSpec.frontend:  "фронтенд",
+    UserSpec.backend:   "бэкенд",
+    UserSpec.fullstack: "фуллстек",
+    UserSpec.analytic:  "аналитик",
+    UserSpec.tester:    "тестировщик",
+    UserSpec.designer:  "дизайнер",
+    UserSpec.devops:    "девопс",
+    UserSpec.other:     "другое"
 }
 """Название каждой специализации на русском языке"""
 
 order_status_tuple: tuple[str] = (
-    OrderStatus.CREATED,
-    OrderStatus.TAKEN,
-    OrderStatus.TESTING,
-    OrderStatus.DONE,
-    OrderStatus.CANCELED
+    OrderStatus.created,
+    OrderStatus.taken,
+    OrderStatus.testings,
+    OrderStatus.done,
+    OrderStatus.canceled
 )
 """Список всех статусов, доступных для заказов"""
 order_status_text: dict[str, str] = {
-    OrderStatus.CREATED:  "создан",
-    OrderStatus.TAKEN:    "взят",
-    OrderStatus.TESTING:  "тестируется",
-    OrderStatus.DONE:     "готов",
-    OrderStatus.CANCELED: "отменён"
+    OrderStatus.created:  "создан",
+    OrderStatus.taken:    "взят",
+    OrderStatus.testings:  "тестируется",
+    OrderStatus.done:     "готов",
+    OrderStatus.canceled: "отменён"
 }
 """Название каждого статуса на русском языке"""

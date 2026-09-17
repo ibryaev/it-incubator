@@ -3,7 +3,7 @@ from enum import Enum
 
 
 class UserRole(str, Enum):
-    CUSTOMER: str = 'customer'
-    STUDENT: str = 'student'
-    MANAGER: str = 'manager'
-    ADMIN: str = 'admin'
+    customer: str = 'customer'
+    student: str = 'student'
+    manager: str = 'manager'
+    admin: str = 'admin'
