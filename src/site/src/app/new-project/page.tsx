@@ -52,14 +52,8 @@ export default function NewProjectPage() {
         headers: { "Content-Type": "application/json" },
         // FastAPI ожидает именно такую структуру из двух моделей:
         body: JSON.stringify({
-          customer: {
-            email: user.email,
-            password: user.passwordRaw
-          },
-          created_order: {
-            title: title.trim(),
-            techspec: techspec
-          }
+          customer: { email: user.email, password: user.passwordRaw },
+          new_order: { title: title.trim(), techspec: techspec }  // ✅ ПРАВИЛЬНО
         })
       });
 
