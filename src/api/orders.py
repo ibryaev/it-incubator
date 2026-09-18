@@ -1,28 +1,20 @@
 from __future__ import annotations
-from pydantic import BaseModel, Field
 from typing import Optional
 from shutil import copyfileobj
-from os import makedirs
 
 from fastapi import APIRouter, HTTPException, Header, UploadFile, File
 
-from config import TITLE_MAX_LEN, TECHSPEC_MIN_LEN
-from config import user_role_tuple, user_role_text
-from models import User
+from config import (
+    SITE_PUBLIC_DIR,
+    user_role_tuple, user_role_text
+)
+from models import User, OrderCreate
 import methods
 from .users import UserLogin
 from singleton import get_db
 
-from pathlib import Path
-
-PUBLIC_DIR = Path(__file__).resolve().parent.parent / "site" / "public"
 
 router = APIRouter()
-
-
-class OrderCreate(BaseModel):
-    title: str      = Field(..., max_length=TITLE_MAX_LEN)
-    techspec: str   = Field(..., min_length=TECHSPEC_MIN_LEN)
 
 
 @router.post("/orders/create")
@@ -176,7 +168,7 @@ async def order_update_preview(
     if "error" in user:
         raise HTTPException(403, user['error'])
 
-    previews_dir = PUBLIC_DIR / "previews"
+    previews_dir = SITE_PUBLIC_DIR / "previews"
     previews_dir.mkdir(parents=True, exist_ok=True)
     file_path = previews_dir / f"order_{order_id}.jpg"
     

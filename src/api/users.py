@@ -1,42 +1,17 @@
 
 from __future__ import annotations
-from pydantic import BaseModel, Field
 from typing import Optional
 from shutil import copyfileobj
-from os import makedirs
 
 from fastapi import APIRouter, HTTPException, Header, UploadFile, File
 
-from config import FIRST_NAME_MAX_LEN, LAST_NAME_MAX_LEN, USER_ROLE_DEFAULT, PASSWORD_MIN_LEN, BIO_MAX_LEN
+from config import SITE_PUBLIC_DIR
+from models import UserRegister, UserLogin, UserSearch
 import methods
 from singleton import get_db
 
-from pathlib import Path
-
-PUBLIC_DIR = Path(__file__).resolve().parent.parent / "site" / "public"  # src/site/public
 
 router = APIRouter()
-
-
-class UserRegister(BaseModel):
-    email: str
-    password: str
-    first_name: str             = Field(..., max_length=FIRST_NAME_MAX_LEN)
-    last_name: Optional[str]    = Field(None, max_length=LAST_NAME_MAX_LEN)
-    role: Optional[str]         = USER_ROLE_DEFAULT
-    spec: Optional[list[str]]   = None
-
-class UserLogin(BaseModel):
-    email: str
-    password: str               = Field(..., min_length=PASSWORD_MIN_LEN)
-
-class UserSearch(BaseModel):
-    email: Optional[str]        = None
-    first_name: Optional[str]   = Field(None, max_length=FIRST_NAME_MAX_LEN)
-    last_name: Optional[str]    = Field(None, max_length=LAST_NAME_MAX_LEN)
-    bio: Optional[str]          = Field(None, max_length=BIO_MAX_LEN)
-    role: Optional[str]         = None
-    spec: Optional[list[str]]   = None
 
 
 @router.post("/users/register")
@@ -211,7 +186,7 @@ async def user_update_avatar(
     file: Optional[UploadFile] = File(...)
 ):
     db = get_db()
-    avatars_dir = PUBLIC_DIR / "avatars"
+    avatars_dir = SITE_PUBLIC_DIR / "avatars"
     avatars_dir.mkdir(parents=True, exist_ok=True)
     file_path = avatars_dir / f"user_{user_id}.jpg"
     with open(file_path, "wb") as buffer:

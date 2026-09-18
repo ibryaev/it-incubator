@@ -2,6 +2,7 @@ from __future__ import annotations
 from dotenv import load_dotenv; load_dotenv()
 from os import getenv
 from zoneinfo import ZoneInfo
+from pathlib import Path
 
 from typedefs import UserRole, UserSpec, OrderStatus
 
@@ -41,6 +42,9 @@ ORDER_STATUS_DEFAULT: str = OrderStatus.created # По умолчанию 'creat
 """Статус заказа по умолчанию"""
 ZONEINFO_DEFAULT: ZoneInfo = ZoneInfo('Europe/Moscow') # По умолчанию 'Europe/Moscow'
 """Часовой пояс по умолчанию"""
+
+SITE_PUBLIC_DIR = Path(__file__).resolve().parent.parent / "site" / "public"
+"""Путь до :code:`src/site/public`"""
 
 
 user_role_tuple: tuple[str] = (
