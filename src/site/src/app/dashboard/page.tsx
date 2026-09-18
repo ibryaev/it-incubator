@@ -121,9 +121,9 @@ export default function DashboardPage() {
     try {
       let endpoint = "";
       let headerKey = "";
-      if (editTarget === "name") { endpoint = "/api/users/update/names"; headerKey = "new_first_name"; } 
-      else if (editTarget === "email") { endpoint = "/api/users/update/email"; headerKey = "new_email"; } 
-      else { endpoint = "/api/users/update/password"; headerKey = "new_password"; }
+      if (editTarget === "name") { endpoint = "/api/users/update/names"; headerKey = "new-first-name"; } 
+      else if (editTarget === "email") { endpoint = "/api/users/update/email"; headerKey = "new-email"; } 
+      else { endpoint = "/api/users/update/password"; headerKey = "new-password"; }
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -161,7 +161,22 @@ export default function DashboardPage() {
       <div className="w-full mb-6">
         <p className="text-[10px] text-gray-500 uppercase tracking-[0.2em] mb-2 ml-1">{label}</p>
         <div className={`relative w-full flex items-center rounded-xl transition-all duration-300 bg-white/[0.03] border backdrop-blur-md px-5 py-3 ${isEditing ? "border-white/30 bg-white/[0.06] shadow-[0_0_15px_rgba(255,255,255,0.05)]" : "border-white/10"}`}>
-          <input type={inputType} value={actualValue} readOnly={!isEditing} onChange={(e) => setTempValue(e.target.value)} className={`flex-1 bg-transparent border-none outline-none text-white text-sm md:text-base tracking-wide ${isEditing ? "placeholder:text-gray-600" : ""}`} placeholder={isEditing && isPassword ? "Введите новый пароль" : ""} />
+          <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={async (e) => {
+            const file = e.target.files?.[0]; if (!file) return;
+            if (!user.passwordRaw) { setError("Сессия устарела. Перезайдите в аккаунт."); return; }
+            const formData = new FormData();
+            formData.append("email", user.email);
+            formData.append("password", user.passwordRaw);
+            formData.append("file", file);
+            const res = await fetch("/api/users/update/avatar", { method: "POST", body: formData });
+            const data = await res.json().catch(() => null);
+            if (!res.ok) {
+              console.error("Avatar upload failed:", res.status, data);
+              setError(`Не удалось загрузить аватар: HTTP ${res.status}`);
+              return;
+            }
+            login({ ...user, avatar_url: (data.avatar_url || "").split("?")[0] + `?t=${Date.now()}` });
+          }} />
           <div className="flex items-center gap-2 ml-2 shrink-0">
             {isPassword && <button type="button" onClick={(e) => { e.preventDefault(); setShowPassword(!showPassword); }} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors">{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>}
             {isEditing ? (

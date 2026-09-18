@@ -55,7 +55,7 @@ async def order_create(
 
     return order
 
-@router.get("/orders/read/{order_id}")
+@router.get("/orders/read/{order-id}")
 async def order_read(
     order_id: int
 ) -> dict:
@@ -77,8 +77,8 @@ async def order_read(
 @router.post("/orders/update/title")
 async def order_update_title(
     request: UserLogin,
-    order_id: int = Header(..., alias="order_id"),
-    new_title: str = Header(..., alias="new_title")
+    order_id: int = Header(..., alias="order-id"),
+    new_title: str = Header(..., alias="new-title")
 ) -> dict:
     """
     Обновить назкание заказа.
@@ -112,8 +112,8 @@ async def order_update_title(
 @router.post("/orders/update/techspec")
 async def order_update_techspec(
     request: UserLogin,
-    order_id: int = Header(..., alias="order_id"),
-    new_techspec: str = Header(..., alias="new_techspec")
+    order_id: int = Header(..., alias="order-id"),
+    new_techspec: str = Header(..., alias="new-techspec")
 ) -> dict:
     """
     Обновить техническое задание заказа.
@@ -147,7 +147,7 @@ async def order_update_techspec(
 @router.post("/orders/update/preview")
 async def order_update_preview(
     request: UserLogin,
-    order_id: int = Header(..., alias="order_id"),
+    order_id: int = Header(..., alias="order-id"),
     file: Optional[UploadFile] = File(None)
 ) -> dict:
     """
@@ -187,8 +187,8 @@ async def order_update_preview(
 @router.post("/orders/update/status")
 async def order_update_status(
     request: UserLogin,
-    order_id: int = Header(..., alias="order_id"),
-    new_status: str = Header(..., alias="new_status")
+    order_id: int = Header(..., alias="order-id"),
+    new_status: str = Header(..., alias="new-status")
 ) -> dict:
     """
     Обновить статус заказа.
@@ -222,8 +222,8 @@ async def order_update_status(
 @router.post("/orders/update/manager")
 async def order_update_manager(
     admin: UserLogin,
-    order_id: int = Header(..., alias="order_id"),
-    new_manager_id: str = Header(..., alias="new_manager_id")
+    order_id: int = Header(..., alias="order-id"),
+    new_manager_id: str = Header(..., alias="new-manager-id")
 ) -> dict:
     """
     Обновить статус заказа.
@@ -257,8 +257,8 @@ async def order_update_manager(
 @router.post("/orders/update/students")
 async def order_update_students(
     admin: UserLogin,
-    order_id: int = Header(..., alias="order_id"),
-    new_students_pinned: list[int] = Header(None, alias="new_students_pinned")
+    order_id: int = Header(..., alias="order-id"),
+    new_students_pinned: list[int] = Header(None, alias="new-students-pinned")
 ) -> dict:
     """
     Обновить статус заказа.

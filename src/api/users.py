@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Optional
 from shutil import copyfileobj
 
-from fastapi import APIRouter, HTTPException, Header, UploadFile, File
+from fastapi import APIRouter, HTTPException, Header, UploadFile, File, Form
 
 from config import SITE_PUBLIC_DIR
 from models import UserRegister, UserLogin, UserSearch
@@ -85,7 +85,7 @@ async def user_search(
 @router.post("/users/update/email")
 async def user_update_email(
     request: UserLogin,
-    new_email: str = Header(..., alias="new_email")
+    new_email: str = Header(..., alias="new-email")
 ) -> dict:
     """
     Обновить электронную почту данной учётной записи.  
@@ -109,7 +109,7 @@ async def user_update_email(
 @router.post("/users/update/password")
 async def user_update_password(
     request: UserLogin,
-    new_password: str = Header(..., alias="new_password")
+    new_password: str = Header(..., alias="new-password")
 ) -> dict:
     """
     Обновить пароль данной учётной записи.  
@@ -133,8 +133,8 @@ async def user_update_password(
 @router.post("/users/update/names")
 async def user_update_names(
     request: UserLogin,
-    new_first_name: Optional[str] = Header(None, alias="new_first_name"),
-    new_last_name: Optional[str] = Header(None, alias="new_last_name")
+    new_first_name: Optional[str] = Header(None, alias="new-first-name"),
+    new_last_name: Optional[str] = Header(None, alias="new-last-name")
 ) -> dict:
     """
     Обновить имя, фамилию данной учётной записи.  
@@ -159,7 +159,7 @@ async def user_update_names(
 @router.post("/users/update/bio")
 async def user_update_bio(
     request: UserLogin,
-    new_bio: Optional[str] = Header(None, alias="new_bio")
+    new_bio: Optional[str] = Header(None, alias="new-bio")
 ) -> dict:
     """
     Обновить поле "О себе" данной учётной записи.  
@@ -180,14 +180,22 @@ async def user_update_bio(
         raise HTTPException(403, result['error'])
     return result
 
+from fastapi import APIRouter, HTTPException, Header, UploadFile, File, Form   # добавить Form
+
 @router.post("/users/update/avatar")
 async def user_update_avatar(
-    request: UserLogin,
-    file: Optional[UploadFile] = File(...)
+    email: str = Form(...),
+    password: str = Form(...),
+    file: UploadFile = File(...),
 ):
+    """
+    Обновить аватар ТЕКУЩЕЙ учётной записи.
+    Аутентификация — email+password полями multipart-формы,
+    user_id берётся из результата логина, а не из заголовка.
+    """
     user = await methods.users.login(
-        request.email,
-        request.password
+        email,
+        password
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
@@ -198,23 +206,22 @@ async def user_update_avatar(
     avatars_dir = SITE_PUBLIC_DIR / "avatars"
     avatars_dir.mkdir(parents=True, exist_ok=True)
     file_path = avatars_dir / f"user_{user_id}.jpg"
-    url = f"/avatars/user_{user_id}.jpg"
-
     with open(file_path, "wb") as buffer:
         copyfileobj(file.file, buffer)
+    url = f"/avatars/user_{user_id}.jpg"
 
     user, err = await db.users.update(
         user_id,
         avatar_url=url
     )
     if err:
-        return {"error": [err]}
+        raise HTTPException(500, err)
     return dict(vars(user))
 
 @router.post("/users/update/spec")
 async def user_update_spec(
     request: UserLogin,
-    new_spec: Optional[list[str]] = Header(None, alias="new_spec")
+    new_spec: Optional[list[str]] = Header(None, alias="new-spec")
 ) -> dict:
     """
     Обновить специальности данной учётной записи.  

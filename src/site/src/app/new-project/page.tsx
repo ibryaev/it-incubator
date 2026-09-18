@@ -18,7 +18,7 @@ const TECHSPEC_MIN = 128;
 const buildTechspec = (productType: string, budget: string, description: string): string => {
   const blocks: string[] = [];
   if (productType.trim()) blocks.push(`Тип продукта: ${productType.trim()}`);
-  if (budget.trim()) blocks.push(`Ориентировочный бюджет/сроки: ${budget.trim()}`);
+  if (budget.trim()) blocks.push(`Ориентировочный бюджет: ${budget.trim()}`);
   const prefix = blocks.length ? blocks.join("\n") + "\n\n" : "";
   return `${prefix}Описание задачи:\n${description}`;
 };
