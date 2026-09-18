@@ -1,5 +1,8 @@
 from __future__ import annotations
-from typing import Optional, Tuple
+from typing import Optional, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typedefs import ErrorString, UserId, OrderId
 
 from psycopg import AsyncConnection, sql
 from psycopg.rows import dict_row
@@ -28,19 +31,20 @@ class TableUsers:
         password: str,
         first_name: str,
         last_name: Optional[str] = None,
-        role: Optional[str] = None,
+        role: str = USER_ROLE_DEFAULT,
         spec: Optional[list[str]] = None,
-    ) -> Tuple[Optional[User], Optional[str]]:
+    ) -> Tuple[Optional[User], Optional[ErrorString]]:
         """
-        Создаёт пользователя в БД.
+        Создать учётную запись.
 
-        :param email: Электронная почта, привязанная к учётной записи.
-        :param password: Пароль (нехэшированный) к учётной записи.
-        :param first_name: Имя пользователя.
-        :param last_name: Фамилия пользователя.
-        :param role: Роль человека в системе. Может равняться только :code:`('customer', 'student', 'manager', 'admin')`.
-        :param spec: Специализации человека. :code:`('frontend', 'backend', 'fullstack', 'analytic', 'tester', 'designer', 'devops', 'other')`.
-        :return: Возвращает :class:`src.utils.types.user.User`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе Класс будет :code:`None`.
+        :param email: Электронная почта.
+        :param password: Захэшированный(!) пароль.
+        :param first_name: Имя.
+        :param last_name: Фамилия.
+        :param role: Роль пользователя в системе. Исходя из :class:`..typedefs.user_role.UserRole`.
+        :param spec: Список специализаций пользователя. Исходя из :class:`..typedefs.user_spec.UserSpec`.
+        :return Успех: :class:`..models.user.User`, :code:`None`.
+        :return Ошибка: :code:`None`, :class:`..typedefs.error_string.ErrorString`.
         """
         try:
             async with self._conn.cursor() as cur:
@@ -52,7 +56,7 @@ class TableUsers:
                 )
                 result = await cur.fetchone()
                 if result:
-                    return None, "Ошибка. Учётная запись с такой эл. почтой уже существует"
+                    return None, "Учётная запись с такой эл. почтой уже существует"
 
                 await cur.execute(
                     """
@@ -60,16 +64,18 @@ class TableUsers:
                     VALUES (%s, %s, %s, %s, %s, %s)
                     RETURNING *
                     """,
-                    (email, password, first_name, last_name, role or USER_ROLE_DEFAULT, spec)
+                    (email, password, first_name, last_name, role, spec)
                 )
                 new_user = await cur.fetchone()
+
                 if new_user is None:
                     await self._conn.rollback()
                     return None, "Непредвиденная ошибка. Пользователь не был создан. Сообщите об этой ошибке"
                 await self._conn.commit()
                 return User(**new_user), None
+
         except Exception as e:
-            print(f"database: user_create(): Ошибка: {e}")
+            print(f"{__name__}: Непредвиденная ошибка: {e}")
             await self._conn.rollback()
             return None, str(e)
 
@@ -77,13 +83,14 @@ class TableUsers:
         self,
         allow_None_values: bool = False,
         **kwargs
-    ) -> Tuple[Optional[User], Optional[str]]:
+    ) -> Tuple[Optional[User], Optional[ErrorString]]:
         """
-        Находит ОДНОГО пользователя по заданым параметрам.
+        Находит одного пользователя по заданым параметрам.
 
         :param allow_None_values: Если :code:`False`, то будет пропускать параметры из kwargs, которые равны :code:`None`. Иначе совершает строгий поиск. 
         :param **kwargs: Кварги, где ключ должен именоваться как таблица из БД, иначе он просто будет пропущен.
-        :return: Возвращает :class:`src.utils.types.user.User`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе Класс будет :code:`None`.
+        :return Успех: :class:`..models.user.User`, :code:`None`.
+        :return Ошибка: :code:`None`, :class:`..typedefs.error_string.ErrorString`.
         """
         columns = []
         params = []
@@ -107,24 +114,26 @@ class TableUsers:
                 if user is None:
                     return None, "Ошибка. Пользователь не найден"
                 return User(**user), None
+
         except UndefinedColumn as e:
-            print(f"database: user_read(): Ошибка: В **kwargs передана несуществующая колонка ({e})")
+            print(f"{__name__}: В **kwargs передана несуществующая колонка ({e})")
             return None, str(e)
         except Exception as e:
-            print(f"database: user_read(): Ошибка: {e}")
+            print(f"{__name__}: Непредвиденная ошибка: {e}")
             return None, str(e)
 
     async def readall(
         self,
         allow_None_values: bool = False,
         **kwargs
-    ) -> Tuple[Optional[list[User]], Optional[str]]:
+    ) -> Tuple[Optional[list[User]], Optional[ErrorString]]:
         """
-        Функция идентична :meth:`user_read`, но вместо одного пользователя, возвращает всех, найденных по заданым параметрам.
+        Функция идентична :meth:`read`, но вместо одного пользователя, возвращает всех, найденных по заданым параметрам.
 
         :param allow_None_values: Если :code:`False`, то будет пропускать параметры из kwargs, которые равны :code:`None`. Иначе совершает строгий поиск. 
         :param **kwargs: Кварги, где ключ должен именоваться как таблица из БД, иначе он просто будет пропущен.
-        :return: Возвращает список :class:`src.utils.types.user.User`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе список классов будет :code:`None`.
+        :return Успех: Список :class:`..models.user.User`, :code:`None`.
+        :return Ошибка: :code:`None`, :class:`..typedefs.error_string.ErrorString`.
         """
         columns = []
         params = []
@@ -151,26 +160,28 @@ class TableUsers:
                 for user in users:
                     users_classes.append(User(**user))
                 return users_classes, None
+
         except UndefinedColumn as e:
-            print(f"database: user_readall(): Ошибка: В **kwargs передана несуществующая колонка ({e})")
+            print(f"{__name__}: В **kwargs передана несуществующая колонка ({e})")
             return None, str(e)
         except Exception as e:
-            print(f"database: user_readall(): Ошибка: {e}")
+            print(f"database: user_readall(): Непредвиденная ошибка: {e}")
             return None, str(e)
 
     async def update(
         self,
-        user_id: int,
+        user_id: UserId,
         allow_None_values: bool = False,
         **kwargs
-    ) -> Tuple[Optional[User], Optional[str]]:
+    ) -> Tuple[Optional[User], Optional[ErrorString]]:
         """
         Обновляет колонки данного пользователя, исходя из :code:`**kwargs`.
 
         :param user_id: UID пользователя, чьи параметры подлежат обновлению.
         :param allow_None_values: Если :code:`False`, то будет пропускать параметры из kwargs, которые равны :code:`None`. Иначе совершает строгое обновление.
         :param **kwargs: Кварги, где ключ должен именоваться как таблица из БД, иначе он просто будет пропущен.
-        :return: Возвращает список :class:`src.utils.types.user.User`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе список классов будет :code:`None`.
+        :return Успех: :class:`..models.user.User`, :code:`None`.
+        :return Ошибка: :code:`None`, :class:`..typedefs.error_string.ErrorString`.
         """
         try:
             # columns - колонки, которые будут затронуты. params - значения, которые нужно вставить в эти колонки
@@ -194,23 +205,25 @@ class TableUsers:
                     return None, "Непредвиденная ошибка. Пользователь не был обновлён. Сообщите об этой ошибке"
                 await self._conn.commit()
                 return User(**updated_user), None
+
         except UndefinedColumn as e:
-            print(f"database: user_update(): Ошибка: В **kwargs передана несуществующая колонка ({e})")
+            print(f"{__name__}: В **kwargs передана несуществующая колонка ({e})")
             await self._conn.rollback()
             return None, str(e)
         except Exception as e:
-            print(f"database: user_update(): Ошибка: {e}")
+            print(f"{__name__}: Непредвиденная ошибка: {e}")
             await self._conn.rollback()
             return None, str(e)
 
     async def delete(
         self,
-        user_id: int
-    ) -> Tuple[Optional[bool], Optional[str]]:
+        user_id: UserId
+    ) -> Tuple[Optional[bool], Optional[ErrorString]]:
         """
         Удаляет данного пользователя из БД.
 
-        :return: Возвращает :code:`True` в случае успеха. Иначе :code:`False`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе :code:`bool` будет :code:`None`.
+        :return Успех: :code:`bool`, :code:`None`.
+        :return Ошибка: :code:`None`, :class:`..typedefs.error_string.ErrorString`.
         """
         try:
             async with self._conn.cursor() as cur:
@@ -227,7 +240,7 @@ class TableUsers:
                 await self._conn.commit()
                 return True, None
         except Exception as e:
-            print(f"database: user_delete(): Ошибка: {e}")
+            print(f"{__name__}: Непредвиденная ошибка: {e}")
             await self._conn.rollback()
             return None, str(e)
 
@@ -244,15 +257,16 @@ class TableOrders:
         self,
         title: str,
         techspec: str,
-        customer_id: int        
-    ) -> Tuple[Optional[Order], Optional[str]]:
+        customer_id: UserId        
+    ) -> Tuple[Optional[Order], Optional[ErrorString]]:
         """
-        Создаёт заказ в БД.
+        Создать заказ.
 
         :param title: Название проекта.
-        :param techspec: **Tech**nical **Spec**ifications - Техническое задание (ТЗ).
-        :param customer_id: UID пользователя, создавшего заказ.
-        :return: Возвращает :class:`src.utils.types.order.Order`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе Класс будет :code:`None`.
+        :param techspec: Описание (техническое задание).
+        :param customer_id: UID учётной записи, которая создала заказ.
+        :return Успех: :class:`..models.order.Order`, :code:`None`.
+        :return Ошибка: :code:`None`, :class:`..typedefs.error_string.ErrorString`.
         """
         try:
             async with self._conn.cursor() as cur:
@@ -274,8 +288,9 @@ class TableOrders:
                     return None, "Непредвиденная ошибка. Заказ не был создан. Сообщите об этой ошибке"
                 await self._conn.commit()
                 return Order(**new_order), None
+
         except Exception as e:
-            print(F"database: order_create(): Ошибка: {e}")
+            print(F"{__name__}: Непредвиденная ошибка: {e}")
             await self._conn.rollback()
             return None, str(e)
 
@@ -283,13 +298,14 @@ class TableOrders:
         self,
         allow_None_values: bool = False,
         **kwargs
-    ) -> Tuple[Optional[User], Optional[str]]:
+    ) -> Tuple[Optional[Order], Optional[ErrorString]]:
         """
-        Находит ОДИН заказ по заданым параметрам.
+        Находит один заказ по заданым параметрам.
 
         :param allow_None_values: Если :code:`False`, то будет пропускать параметры из kwargs, которые равны :code:`None`. Иначе совершает строгий поиск. 
         :param **kwargs: Кварги, где ключ должен именоваться как таблица из БД, иначе он просто будет пропущен.
-        :return: Возвращает :class:`src.utils.types.order.Order`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе Класс будет :code:`None`.
+        :return Успех: :class:`..models.order.Order`, :code:`None`.
+        :return Ошибка: :code:`None`, :class:`..typedefs.error_string.ErrorString`.
         """
         columns = []
         params = []
@@ -311,26 +327,28 @@ class TableOrders:
                 await cur.execute(query, params)
                 order = await cur.fetchone()
                 if order is None:
-                    return None, "Ошибка. Заказ не найден"
+                    return None, "Заказ не найден"
                 return Order(**order), None
+
         except UndefinedColumn as e:
-            print(f"database: order_read(): Ошибка: В **kwargs передана несуществующая колонка ({e})")
+            print(f"{__name__}: В **kwargs передана несуществующая колонка ({e})")
             return None, str(e)
         except Exception as e:
-            print(f"database: order_read(): Ошибка: {e}")
+            print(f"{__name__}: Непредвиденная ошибка: {e}")
             return None, str(e)
 
     async def readall(
         self,
         allow_None_values: bool = False,
         **kwargs
-    ) -> Tuple[Optional[list[User]], Optional[str]]:
+    ) -> Tuple[Optional[list[Order]], Optional[ErrorString]]:
         """
-        Функция идентична :meth:`order_read`, но вместо одного заказа, возвращает все найденные по заданым параметрам.
+        Функция идентична :meth:`read`, но вместо одного заказа, возвращает все найденные по заданым параметрам.
 
         :param allow_None_values: Если :code:`False`, то будет пропускать параметры из kwargs, которые равны :code:`None`. Иначе совершает строгий поиск. 
         :param **kwargs: Кварги, где ключ должен именоваться как таблица из БД, иначе он просто будет пропущен.
-        :return: Возвращает :class:`src.utils.types.order.Order`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе Класс будет :code:`None`.
+        :return Успех: Список :class:`..models.order.Order`, :code:`None`.
+        :return Ошибка: :code:`None`, :class:`..typedefs.error_string.ErrorString`.
         """
         columns = []
         params = []
@@ -357,26 +375,28 @@ class TableOrders:
                 for order in orders:
                     orders_classes.append(Order(**order))
                 return orders_classes, None
+
         except UndefinedColumn as e:
-            print(f"database: order_readall(): Ошибка: В **kwargs передана несуществующая колонка ({e})")
+            print(f"{__name__}: В **kwargs передана несуществующая колонка ({e})")
             return None, str(e)
         except Exception as e:
-            print(f"database: order_readall(): Ошибка: {e}")
+            print(f"{__name__}: Непредвиденная ошибка: {e}")
             return None, str(e)
 
     async def update(
         self,
-        order_id: int,
+        order_id: OrderId,
         allow_None_values: bool = False,
         **kwargs
-    ) -> Tuple[Optional[User], Optional[str]]:
+    ) -> Tuple[Optional[Order], Optional[ErrorString]]:
         """
         Обновляет колонки данного заказа, исходя из :code:`**kwargs`.
 
         :param order_id: OID заказа, чьи параметры подлежат обновлению.
         :param allow_None_values: Если :code:`False`, то будет пропускать параметры из kwargs, которые равны :code:`None`. Иначе совершает строгое обновление.
         :param **kwargs: Кварги, где ключ должен именоваться как таблица из БД, иначе он просто будет пропущен.
-        :return: Возвращает :class:`src.utils.types.order.Order`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе Класс будет :code:`None`.
+        :return Успех: :class:`..models.order.Order`, :code:`None`.
+        :return Ошибка: :code:`None`, :class:`..typedefs.error_string.ErrorString`.
         """
         try:
             # columns - колонки, которые будут затронуты. params - значения, которые нужно вставить в эти колонки
@@ -400,23 +420,25 @@ class TableOrders:
                     return None, "Непредвиденная ошибка. Заказ не был обновлён. Сообщите об этой ошибке"
                 await self._conn.commit()
                 return Order(**updated_order), None
+
         except UndefinedColumn as e:
-            print(f"database: order_update(): Ошибка: В **kwargs передана несуществующая колонка ({e})")
+            print(f"{__name__}: В **kwargs передана несуществующая колонка ({e})")
             await self._conn.rollback()
             return None, str(e)
         except Exception as e:
-            print(f"database: order_update(): Ошибка: {e}")
+            print(f"{__name__}: Непредвиденная ошибка: {e}")
             await self._conn.rollback()
             return None, str(e)
 
     async def delete(
         self,
-        order_id: int
-    ) -> Tuple[Optional[bool], Optional[str]]:
+        order_id: OrderId
+    ) -> Tuple[Optional[bool], Optional[ErrorString]]:
         """
         Удаляет данный заказ из БД.
 
-        :return: Возвращает :code:`True` в случае успеха. Иначе :code:`False`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе :code:`bool` будет :code:`None`.
+        :return Успех: :code:`bool`, :code:`None`.
+        :return Ошибка: :code:`None`, :class:`..typedefs.error_string.ErrorString`.
         """
         try:
             async with self._conn.cursor() as cur:
@@ -433,7 +455,7 @@ class TableOrders:
                 await self._conn.commit()
                 return True, None
         except Exception as e:
-            print(f"database: order_delete(): Ошибка: {e}")
+            print(f"{__name__}: Непредвиденная ошибка: {e}")
             await self._conn.rollback()
             return None, str(e)
 
