@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS orders (                                             
     id SERIAL PRIMARY KEY,                                                      -- Уникальный ID (order_id, oid)
     title VARCHAR(192) NOT NULL,                                                -- Название проекта
     techspec TEXT NOT NULL,                                                     -- Описание (техническое задание)
-    preview_url TEXT NOT NULL,                                                  -- Превью проекта
+    preview_url TEXT DEFAULT NULL,                                              -- Превью проекта (заполняется позже)
     "status" order_status_type NOT NULL DEFAULT 'created',                      -- Статус заказа: создан, взят в работу, тестируется, готов, отменён
     customer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,        -- users(id) пользователя, который создал заказ
     manager_id INTEGER DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,    -- users(id) менеджера, который взял заказ

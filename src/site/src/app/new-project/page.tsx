@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/auth-provider";
@@ -12,7 +11,17 @@ import { motion, Variants } from "framer-motion";
 const fadeInUp: Variants = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const } } };
 const staggerContainer: Variants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.08, delayChildren: 0.1 } } };
 
-const TECHSPEC_MIN = 128; // = TECHSPEC_MIN_LEN в config.py бэкенда
+const TECHSPEC_MIN = 128;
+
+// Собираем techspec по тем же правилам, что и отправляем.
+// Пустые поля НЕ вклеиваем. Обязательный минимум — "Описание задачи:\n" + само описание.
+const buildTechspec = (productType: string, budget: string, description: string): string => {
+  const blocks: string[] = [];
+  if (productType.trim()) blocks.push(`Тип продукта: ${productType.trim()}`);
+  if (budget.trim()) blocks.push(`Ориентировочный бюджет/сроки: ${budget.trim()}`);
+  const prefix = blocks.length ? blocks.join("\n") + "\n\n" : "";
+  return `${prefix}Описание задачи:\n${description}`;
+};
 
 export default function NewProjectPage() {
   const [title, setTitle] = useState("");
@@ -24,29 +33,23 @@ export default function NewProjectPage() {
   const { user, login } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!user) router.push("/login");
-  }, [user, router]);
-
+  useEffect(() => { if (!user) router.push("/login"); }, [user, router]);
   if (!user) return null;
 
-  const techspec = `Тип продукта: ${productType || "Не указан"}\nОриентировочный бюджет/сроки: ${budget || "Не указаны"}\n\nОписание задачи:\n${description}`;
-  const prefixLen = techspec.length - description.length;
-  const minDescription = Math.max(0, TECHSPEC_MIN - prefixLen);
+  const techspec = buildTechspec(productType, budget, description);
+  const descriptionMarker = "Описание задачи:\n";
+  const prefixLen = techspec.length - description.length - descriptionMarker.length + descriptionMarker.length;
+  const minDescription = Math.max(1, TECHSPEC_MIN - (techspec.length - description.length));
   const descriptionOk = description.trim().length >= minDescription;
+  const totalOk = techspec.trim().length >= TECHSPEC_MIN;
 
   const handleSubmit = async () => {
     setError("");
-    if (!title.trim() || !description.trim()) {
-      return setError("Название и краткое описание обязательны");
-    }
-    if (!user.passwordRaw) {
-      return setError("Сессия устарела. Перезайдите в аккаунт.");
-    }
-    if (techspec.trim().length < TECHSPEC_MIN) {
-      return setError(
-        `Описание слишком короткое: нужно ещё минимум ${Math.max(0, minDescription - description.trim().length)} символов.`
-      );
+    if (!title.trim()) return setError("Название проекта обязательно");
+    if (!description.trim()) return setError("Описание задачи обязательно");
+    if (!user.passwordRaw) return setError("Сессия устарела. Перезайдите в аккаунт.");
+    if (!totalOk) {
+      return setError(`Описание слишком короткое: нужно ещё минимум ${minDescription - description.trim().length} символов.`);
     }
 
     setIsLoading(true);
@@ -68,8 +71,7 @@ export default function NewProjectPage() {
         let backendError = "Ошибка сервера";
         if (data.detail) {
           if (typeof data.detail === "string") backendError = data.detail;
-          else if (Array.isArray(data.detail))
-            backendError = typeof data.detail[0] === "string" ? data.detail[0] : data.detail[0]?.msg || "Ошибка валидации";
+          else if (Array.isArray(data.detail)) backendError = typeof data.detail[0] === "string" ? data.detail[0] : data.detail[0]?.msg || "Ошибка валидации";
         } else if (data.error) {
           backendError = typeof data.error === "string" ? data.error : data.error[0];
         }
@@ -109,9 +111,8 @@ export default function NewProjectPage() {
               onChange={e => setDescription(e.target.value)}
               className="w-full px-6 py-4 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 focus:bg-white/[0.05] backdrop-blur-md transition-all duration-300 resize-none h-32"
             />
-            {/* Счётчик считает ТОЛЬКО описание пользователя */}
-            <p className={`text-right text-[10px] tabular-nums ${descriptionOk ? "text-green-500" : "text-gray-600"}`}>
-              Описание: {description.trim().length} / мин. {minDescription} символов
+            <p className={`text-right text-[10px] tabular-nums ${totalOk ? "text-green-500" : "text-gray-600"}`}>
+              {description.trim().length} / {minDescription}
             </p>
             {error && <p className="text-red-400 text-[11px] italic text-center bg-red-500/10 py-2 rounded-lg border border-red-500/20">{error}</p>}
           </motion.div>
