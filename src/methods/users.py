@@ -1,15 +1,20 @@
 from __future__ import annotations
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from config import user_role_tuple, user_spec_tuple
-from singleton import get_db
-from config import EMAIL_RESTRICTED_DOMAINS, FIRST_NAME_MAX_LEN, LAST_NAME_MAX_LEN, PASSWORD_MIN_LEN, USER_ROLE_DEFAULT, BIO_MAX_LEN
+if TYPE_CHECKING:
+    from typedefs import UserDict, ErrorsDict, BoolResultDict, ErrorString, UserId
+
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
+from utils import check_email, check_password, check_name, check_bio, check_role, check_spec
+from singleton import get_db
 
-ph = PasswordHasher()
 
+ph: PasswordHasher = PasswordHasher()
+
+
+#   Create  #
 
 async def register(
     email: str,
@@ -18,72 +23,48 @@ async def register(
     last_name: Optional[str] = None,
     role: Optional[str] = None,
     spec: Optional[list[str]] = None
-) -> dict:
+) -> UserDict | ErrorsDict:
     """
-    Регистрирует пользователя (создание учётной записи).
+    Зарегистрировать пользователя (создать учётную запись).
 
-    :param email: Электронная почта, привязанная к учётной записи.
-    :param password: Пароль (нехэшированный) к учётной записи.
-    :param first_name: Имя. Если длиннее 64 символов - обрезается.
-    :param last_name: Фамилия. Если длиннее 64 символов - обрезается.
-    :param role: Роль пользователя в системе. Исходя из списка :data:`src.utils.utils.user_role_type`. Если :code:`None`, то выставится значение :code:`"customer"`.
-    :param spec: Список специализаций пользователя. Исходя из списка :data:`src.utils.utils.user_spec_type`.
-    :return: В случае успеха возвращает словарь с данными пользователя. Иначе: :code:`{"error": [ошибк(а/и)]}`.
+    :param email: Электронная почта.
+    :param password: Незахэшированный(!) пароль.
+    :param first_name: Имя.
+    :param last_name: Фамилия.
+    :param role: Роль пользователя в системе. Исходя из :class:`..typedefs.user_role.UserRole`.
+    :param spec: Список специализаций пользователя. Исходя из :class:`..typedefs.user_spec.UserSpec`.
+    :return UserDict: Успех.
+    :return ErrorsDict: Известные ошибки: :func:`..utils.check_email`, :func:`..utils.check_name`, :func:`..utils.check_password`/пароль небезопасный, :func:`..utils.check_role`.
     """
     db = get_db()
-    errors: list[str] = []
+    errors: list[ErrorString] = []
 
     email = email.lower().strip()
-    if not email:
-        errors.append("Эл. почта должна быть заполнена")
-    if not "@" in email or not "." in email:
-        errors.append("Неккоректная эл. почта")
-    if email.endswith(EMAIL_RESTRICTED_DOMAINS):
-        errors.append("Недопустимая почта")
+    res = check_email(email)
+    if res: errors.append(res)
 
     first_name = first_name.strip()
-    if not first_name:
-        errors.append("Пустое имя")
-    if len(first_name) > FIRST_NAME_MAX_LEN:
-        errors.append("Слишком длинное имя")
+    res = check_name(first_name)
+    if res: errors.append(res)
 
     if last_name:
         last_name = last_name.strip()
-        if not last_name:
-            last_name = None
-        if len(last_name) > LAST_NAME_MAX_LEN:
-            errors.append("Слишком длинная фамилия")
+        res = check_name(last_name, is_last_name=True)
+        if res: errors.append(res)
 
     password = password.strip()
-    if not password:
-        errors.append("Пароль должен быть заполнен")
-    if len(password) < PASSWORD_MIN_LEN:
-        errors.append("Пароль слишком короткий")
-    if password in (email, first_name, last_name, f"{first_name} {last_name}"):
-        errors.append("Слишком небезопасный пароль")
+    res = check_password(password)
+    if res: errors.append(res)
+    if password.casefold() in (email.casefold(), first_name.casefold(), last_name.casefold(), f"{first_name} {last_name}".casefold()):
+        errors.append("Пароль небезопасный")
     password_hash = ph.hash(password)
 
     if role:
         role = role.strip()
-        if not role:
-            errors.append("Пустая роль")
-        if role not in user_role_tuple:
-            errors.append(f"Неизвестная роль - {role}")
-    if role is None:
-        role = USER_ROLE_DEFAULT
+        res = check_role(role)
+        if res: errors.append(res)
 
-    if spec:
-        old_spec = spec
-        spec = []
-        for s in old_spec:
-            if s in user_spec_tuple:
-                s = s.strip()
-                if s:
-                    spec.append(s)
-                else: continue
-            else: continue
-        if not spec:
-            spec = None
+    if spec: spec = check_spec(spec)
 
     if errors:
         return {"error": errors}
@@ -100,32 +81,29 @@ async def register(
         return {"error": [err]}
     return dict(vars(new_user))
 
+#   Read    #
+
 async def login(
     email: str,
     password: str
-) -> dict:
+) -> UserDict | ErrorsDict:
     """
-    Находит пользователя по его эл. почте и паролю.
+    Найти пользователя по его почте и паролю.
 
-    :param email: Электронная почта, привязанная к учётной записи.
-    :param password: Пароль к учётной записи.
-    :return: В случае успеха возвращает словарь с данными пользователя. Иначе: :code:`{"error": [ошибк(а/и)]}`.
+    :param email: Электронная почта.
+    :param password: Незахэшированный(!) пароль.
+    :return UserDict: Успех.
+    :return ErrorsDict: :func:`..utils.check_email`, :func:`..utils.check_password`, неверная почта или пароль.
     """
     db = get_db()
 
     email = email.lower().strip()
-    if not email:
-        return {"error": ["Эл. почта должна быть заполнена"]}
-    if not "@" in email or not "." in email:
-        return {"error": ["Неккоректная эл. почта"]}
-    if email.endswith(EMAIL_RESTRICTED_DOMAINS):
-        return {"error": ["Недопустимая почта"]}
+    res = check_email(email)
+    if res: return {'error': [res]}
 
     password = password.strip()
-    if not password:
-        return {"error": ["Пароль должен быть заполнен"]}
-    if len(password) < PASSWORD_MIN_LEN:
-        return {"error": ["Пароль слишком короткий"]}
+    res = check_password(password)
+    if res: return {'error': [res]}
 
     user, err = await db.users.read(email=email)
     if err:
@@ -137,7 +115,7 @@ async def login(
         return {"error": ["Неверная почта или пароль"]}
     except Exception as e:
         print(f"methods/users.py: login_account(): Ошибка: {e}")
-        return {"error": ["Непредвиденная ошибка. Пользователь не был найден. Сообщите об этой ошибке"]}
+        return {"error": ["Непредвиденная ошибка. Сообщите об этой ошибке"]}
     else:
         old_password_hash = user.password_hash
         if ph.check_needs_rehash(user.password_hash):
@@ -151,13 +129,14 @@ async def login(
         return dict(vars(user))
 
 async def read(
-    user_id: int
-) -> dict:
+    user_id: UserId
+) -> UserDict | ErrorsDict:
     """
     Находит учётную запись по UID.
 
     :param user_id: UID искомой учётной записи.
-    :return: В случае успеха возвращает словарь с данными учётной записи. Иначе: :code:`{"error": [ошибк(а/и)]}`.
+    :return UserDict: Успех.
+    :return ErrorsDict: Ошибка со стороны БД.
     """
     db = get_db()
 
@@ -173,36 +152,57 @@ async def search(
     bio: Optional[str],
     role: Optional[str],
     spec: Optional[list[str]]
-) -> dict:
+) -> list[UserDict] | ErrorsDict:
     """
-    Находит пользователей по данным параметрам.
-    
-    :param email: Электронная почта, привязанная к учётной записи.
+    Находит пользователей по разным параметрам.
+
+    :param email: Электронная почта.
     :param first_name: Имя.
     :param last_name: Фамилия.
-    :param bio: Поле "О себе".
-    :param role: Роль пользователя в системе. Исходя из списка :data:`src.utils.utils.user_role_type`.
-    :param spec: Список специализаций пользователя. Исходя из списка :data:`src.utils.utils.user_spec_type`.
-    :return: В случае успеха возвращает словарь с данными пользователя. Иначе: :code:`{"error": [ошибк(а/и)]}`.
+    :param role: Роль пользователя в системе. Исходя из :class:`..typedefs.user_role.UserRole`.
+    :param spec: Список специализаций пользователя. Исходя из :class:`..typedefs.user_spec.UserSpec`.
+    :return list[UserDict]: Успех.
+    :return ErrorsDict: Ошибка со стороны БД.
     """
     db = get_db()
+    error: str | None = None
 
-    searches = {}
+    searches: dict[str] = {}
     if email:
-        searches['email'] = email.strip()
+        email = email.strip()
+        res = check_email(email)
+        if res: error = res
+        searches['email'] = email
     if first_name:
-        searches['first_name'] = first_name.strip()
+        first_name = first_name.strip()
+        res = check_name(first_name)
+        if res: error = res
+        searches['first_name'] = first_name
     if last_name:
-        searches['last_name'] = last_name.strip()
+        last_name = last_name.strip()
+        res = check_name(last_name, is_last_name=True)
+        if res: error = res
+        searches['last_name'] = last_name
     if bio:
-        searches['bio'] = bio.strip()
+        bio = bio.strip()
+        if not bio: error = 'Пустое описание'
+        searches['bio'] = bio
     if role:
-        searches['role'] = role.strip()
+        role = role.strip()
+        res = check_role(role)
+        if res: error = res
+        searches['role'] = role
     if spec:
-        searches['spec'] = spec
+        searches['spec'] = check_spec(spec)
 
     if not searches:
         return {"error": ["Нужно уточнить хотябы один параметр поиска"]}
+    if error:
+        return {'error': [error]}
+
+    for key, value in searches.items():
+        if not value:
+            searches.pop(key)
 
     users, err = await db.users.readall(**searches)
     if err:
@@ -212,25 +212,25 @@ async def search(
         result["users"].append(dict(vars(user)))
     return result
 
+#   Update  #
+
 async def change_email(
-    user_id: int,
+    user_id: UserId,
     new_email: str
-) -> dict:
+) -> UserDict | ErrorsDict:
     """
     Обновление эл. почты, привязанной к учётной записи.
 
     :param user_id: UID учётной записи, чьи параметры подлежат обновлению.
     :param new_email: Новая эл. почта.
+    :return UserDict: Успех.
+    :return ErrorsDict: Известные ошибки: :func:`..utils.check_email`.
     """
     db = get_db()
 
     new_email = new_email.lower().strip()
-    if not new_email:
-        return {"error": ["Эл. почта должна быть заполнена"]}
-    if not "@" in new_email or not "." in new_email:
-        return {"error": ["Неккоректная эл. почта"]}
-    if new_email.endswith(EMAIL_RESTRICTED_DOMAINS):
-        return {"error": ["Недопустимая почта"]}
+    res = check_email(new_email)
+    if res: return {'error': [res]}
 
     user, err = await db.users.update(
         user_id,
@@ -241,14 +241,16 @@ async def change_email(
     return dict(vars(user))
 
 async def change_password(
-    user_id: int,
+    user_id: UserId,
     new_password: str
-) -> dict:
+) -> UserDict | ErrorsDict:
     """
     Обновление пароля от учётной записи.
 
     :param user_id: UID учётной записи, чьи параметры подлежат обновлению.
     :param new_password: Новый пароль.
+    :return UserDict: Успех.
+    :return ErrorsDict: Известные ошибки: :func:`..utils.check_password`.
     """
     db = get_db()
 
@@ -257,15 +259,15 @@ async def change_password(
         return {"error": [err]}
 
     new_password = new_password.strip()
-    if not new_password:
-        return {"error": ["Пароль должен быть заполнен"]}
-    if len(new_password) < PASSWORD_MIN_LEN:
-        return {"error": ["Пароль слишком короткий"]}
+    res = check_password(new_password)
+    if res: return {'error': [res]}
+
+    user_last_name: str = user.last_name or user.first_name
     personal_data = (
-        str(user.email).casefold(),
-        str(user.first_name).casefold(),
-        str(user.last_name).casefold(),
-        str(user.full_name).casefold()
+        user.email.casefold(),
+        user.first_name.casefold(),
+        user_last_name.casefold(),
+        user.full_name.casefold()
     )
     if new_password.casefold() in personal_data:
         return {"error": ["Слишком простой пароль"]}
@@ -280,78 +282,67 @@ async def change_password(
     return dict(vars(user))
 
 async def change_names(
-    user_id: int,
+    user_id: UserId,
     new_first_name: Optional[str] = None,
     new_last_name: Optional[str] = None
-) -> dict:
+) -> UserDict | ErrorsDict:
     """
-    Обновление имени, фамилии профиля.  
-    Если одно из значений None
+    Обновление имени и фамилии профиля.
 
     :param user_id: UID учётной записи, чьи параметры подлежат обновлению.
     :param new_first_name: Новое имя.
     :param new_last_name: Новая фамилия.
+    :return UserDict: Успех.
+    :return ErrorsDict: Известные ошибки: оба параметра :code:`None`, :func:`..utils.check_name`.
     """
     db = get_db()
 
     if (new_first_name is None and new_last_name is None) or (not new_first_name.strip() and not new_last_name.strip()):
         return {"error": ["Нужно внести хоть какие-то изменения"]}
 
-    errors: list[str] = []
+    errors: list[ErrorString] = []
 
     if new_first_name:
         new_first_name = new_first_name.strip()
-        if not new_first_name:
-            new_first_name = None
-        if len(new_first_name) > FIRST_NAME_MAX_LEN:
-            errors.append("Слишком длинное имя")
+        res = check_name(new_first_name)
+        if res: errors.append(res)
 
     if new_last_name:
         new_last_name = new_last_name.strip()
-        if not new_last_name:
-            new_last_name = None
-        if len(new_last_name) > LAST_NAME_MAX_LEN:
-            errors.append("Слишком длинная фамилия")
+        res = check_name(new_last_name, is_last_name=True)
+        if res: errors.append(res)
 
     if errors:
         return {"error": errors}
 
-    if new_first_name:
-        user, err = await db.users.update(
-            user_id,
-            True,
-            first_name=new_first_name,
-            last_name=new_last_name
-        )
-    else:
-        user, err = await db.users.update(
-            user_id,
-            True,
-            last_name=new_last_name
-        )
+    user, err = await db.users.update(
+        user_id,
+        True,
+        first_name=new_first_name,
+        last_name=new_last_name
+    )
     if err:
         return {"error": [err]}
     return dict(vars(user))
 
 async def change_bio(
-    user_id: int,
+    user_id: UserId,
     new_bio: Optional[str] = None
-) -> dict:
+) -> UserDict | ErrorsDict:
     """
     Обновление описание профиля.
 
     :param user_id: UID учётной записи, чьи параметры подлежат обновлению.
     :param new_bio: Новое описание.
-    :return: В случае успеха возвращает словарь с уже обновлёнными данными пользователя. Иначе: :code:`{"error": [ошибк(а/и)]}`.
+    :return UserDict: Успех.
+    :return ErrorsDict: Известные ошибки: :func:`..utils.check_bio`.
     """
     db = get_db()
 
     if new_bio:
         new_bio = new_bio.strip()
-        if not new_bio:
-            new_bio = None
-        if new_bio and len(new_bio) > BIO_MAX_LEN:
-            return {"error": ["Описание слишком длинное"]}
+        res = check_bio(new_bio)
+        if res: return {'error': [res]}
 
     updated_user, err = await db.users.update(
         user_id,
@@ -363,61 +354,53 @@ async def change_bio(
     return dict(vars(updated_user))
 
 async def change_spec(
-    user_id: int,
-    spec: Optional[list[str]],
+    user_id: UserId,
+    new_spec: Optional[list[str]],
     rewrite: bool = False
-) -> dict:
+) -> UserDict | ErrorsDict:
     """
     Обновляет список специализаций пользователя.
 
-    :param user_id: ID пользователя, чьи параметры подлежат обновлению.
-    :param spec: Список с новыми параметрами. Исходя из списка :data:`src.utils.utils.user_spec_type`.
-    :param rewrite: Если :code:`False`, то прибавит с текущему списку специализаций пользователя новые, данные в параметре :code:`spec`. Иначе совершит перезапись.
-    :return: В случае успеха возвращает словарь с уже обновлёнными данными пользователя. Иначе: :code:`{"error": [ошибк(а/и)]}`.
+    :param user_id: UID учётной записи, чьи параметры подлежат обновлению.
+    :param spec: Список с новыми специализациями. Исходя из :data:`..typedefs.user_spec.UserSpec`.
+    :param rewrite: Если :code:`False`, то прибавит с текущему списку специализаций пользователя новые, данные в параметре :code:`new_spec`. Иначе совершит перезапись.
+    :return UserDict: Успех.
+    :return ErrorsDict: Ошибка со стороны БД.
     """
     db = get_db()
 
-    if spec:
-        old_spec = spec
-        spec = []
-        for s in old_spec:
-            if s and s in user_spec_tuple:
-                s = s.strip()
-                if s:
-                    spec.append(s)
-                else: continue
-            else: continue
-        if not spec:
-            spec = None
+    if new_spec:
+        new_spec = check_spec(new_spec)
 
-        if spec is not None:
+        if new_spec is not None:
             user, err = await db.users.read(id=user_id)
             if err:
                 return {"error": [err]}
 
-            if not rewrite:
-                spec = user.spec + spec
-            else:
-                pass
-            spec = set(spec)
+            if not rewrite and user.spec:
+                new_spec = user.spec + new_spec
+            new_spec = list(set(new_spec))
 
     updated_user, err = await db.users.update(
         user_id,
         True,
-        spec=spec
+        spec=new_spec
     )
     if err:
         return {"error": [err]}
     return dict(vars(updated_user))
 
+#   Delete  #
+
 async def delete(
-    user_id: int,
-) -> dict:
+    user_id: UserId,
+) -> BoolResultDict | ErrorsDict:
     """
-    Удаляет учётную запись.
+    Удаление учётной записи.
 
     :param user_id: UID удаляемой учётной записи.
-    :return: В случае успеха возвращает словарь :code:`{"result": True/False}`. Иначе: :code:`{"error": [ошибк(а/и)]}`.
+    :return BoolResultDict: Результат изменений.
+    :return ErrorsDict: Ошибка со стороны БД.
     """
     db = get_db()
 

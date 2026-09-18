@@ -1,35 +1,39 @@
 from __future__ import annotations
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from config import (
-    order_status_tuple,
-    TITLE_MAX_LEN, TECHSPEC_MIN_LEN
-)
+if TYPE_CHECKING:
+    from typedefs import OrderDict, ErrorsDict, BoolResultDict, ErrorString, OrderId, UserId
+
+from utils import check_title, check_techspec, check_status
 from singleton import get_db
 
+
+#   Create  #
 
 async def create(
     title: str,
     techspec: str,
-    customer_id: int
-) -> dict:
+    customer_id: UserId
+) -> OrderDict | ErrorsDict:
     """
-    
+    Создать (разместить) заказ.
+
+    :param title: Название проекта.
+    :param techspec: Описание (техническое задание).
+    :param customer_id: UID учётной записи, которая создала заказ.
+    :return OrderDict: Успех.
+    :return ErrorsDict: Известные ошибки: :func:`..utils.check_title`, :func:`..utils.check_techspec`.
     """
     db = get_db()
-    errors = []
+    errors: list[ErrorString] = []
 
     title = title.strip()
-    if not title:
-        errors.append("Пустое название проекта")
-    if len(title) > TITLE_MAX_LEN:
-        errors.append("Слишком длинное название проетка")
+    res = check_title(title)
+    if res: errors.append(res)
 
     techspec = techspec.strip()
-    if not techspec:
-        errors.append("Пустое техническое задание")
-    if len(techspec) < TECHSPEC_MIN_LEN:
-        errors.append("Слишком короткое техническое задание")
+    res = check_techspec(techspec)
+    if res: errors.append(res)
 
     new_order, err = await db.orders.create(
         title,
@@ -40,11 +44,17 @@ async def create(
         return {"error": [err]}
     return dict(vars(new_order))
 
+#   Read    #
+
 async def read(
-    order_id: int
-) -> dict:
+    order_id: OrderId
+) -> OrderDict | ErrorsDict:
     """
-    
+    Находит заказ запись по OID.
+
+    :param order_id: OID искомого заказа.
+    :return OrderDict: Успех.
+    :return ErrorsDict: Ошибка со стороны БД.
     """
     db = get_db()
 
@@ -53,45 +63,56 @@ async def read(
         return {"error": [err]}
     return dict(vars(order))
 
-# async def search_orders()
+# async def search(
+#     ...
+# ) -> list[OrderDict] | ErrorsDict:
+#     ...
+
+#   Update  #
 
 async def change_title(
-    order_id: int,
+    order_id: OrderId,
     new_title: str
-) -> dict:
+) -> OrderDict | ErrorsDict:
     """
-    
+    Обновление названия проекта (заказа).
+
+    :param order_id: OID заказа, чьи параметры подлежат обновлению.
+    :param new_title: Новое название.
+    :return OrderDict: Успех.
+    :return ErrorsDict: Известные ошибки: :func:`..utils.check_title`.
     """
     db = get_db()
 
     new_title = new_title.strip()
-    if not new_title:
-        return {"error": ["Пустое название"]}
-    if len(new_title) > TITLE_MAX_LEN:
-        return {"error": ["Слишком длинное название"]}
+    res = check_title(new_title)
+    if res: return {'error': [res]}
 
     updated_order, err = await db.orders.update(
         order_id,
-         title=new_title
+        title=new_title
     )
     if err:
         return {"error": [err]}
     return dict(vars(updated_order))
 
 async def change_techspec(
-    order_id: int,
+    order_id: OrderId,
     new_techspec: str
-) -> dict:
+) -> OrderDict | ErrorsDict:
     """
-    
+    Обновление технического задания.
+
+    :param order_id: OID заказа, чьи параметры подлежат обновлению.
+    :param new_techspec: Новое техническое задание (описание).
+    :return OrderDict: Успех.
+    :return ErrorsDict: Известные ошибки: :func:`..utils.check_techspec`.
     """
     db = get_db()
 
     new_techspec = new_techspec.strip()
-    if not new_techspec:
-        return {"error": ["Пустое техническое задание"]}
-    if len(new_techspec) < TECHSPEC_MIN_LEN:
-        return {"error": ["Слишком короткое техническое задание"]}
+    res = check_techspec(new_techspec)
+    if res: return {'error': [res]}
 
     updated_order, err = await db.orders.update(
         order_id,
@@ -102,19 +123,22 @@ async def change_techspec(
     return dict(vars(updated_order))
 
 async def change_status(
-    order_id: int,
+    order_id: OrderId,
     new_status: str
-) -> dict:
+) -> OrderDict | ErrorsDict:
     """
-    
+    Обновление статуса заказа.
+
+    :param order_id: OID заказа, чьи параметры подлежат обновлению.
+    :param new_status: Новый статус заказа. Исходя из :data:`..typedefs.order_status.OrderStatus`.
+    :return OrderDict: Успех.
+    :return ErrorsDict: Известные ошибки: :func:`..utils.check_status`.
     """
     db = get_db()
 
     new_status = new_status.strip()
-    if not new_status:
-        return {"error": ["Пустой статус"]}
-    if new_status not in order_status_tuple:
-        return {"error": [f"Неизвестный статус - {new_status}"]}
+    res = check_status(new_status)
+    if res: return {'error': [res]}
 
     updated_order, err = await db.orders.update(
         order_id,
@@ -125,11 +149,16 @@ async def change_status(
     return dict(vars(updated_order))
 
 async def change_manager(
-    order_id: int,
-    new_manager_id: int
-) -> dict:
+    order_id: OrderId,
+    new_manager_id: UserId
+) -> OrderDict | ErrorsDict:
     """
-    
+    Обновление менеджера, закреплённого за заказом.
+
+    :param order_id: OID заказа, чьи параметры подлежат обновлению.
+    :param new_manager_id: UID нового менеджера.
+    :return OrderDict: Успех.
+    :return ErrorsDict: Ошибка со стороны БД.
     """
     db = get_db()
 
@@ -146,11 +175,18 @@ async def change_manager(
     return dict(vars(updated_order))
 
 async def change_students(
-    order_id: int,
-    new_students_pinned: Optional[list[int]]
-) -> dict:
+    order_id: OrderId,
+    new_students_pinned: Optional[list[int]],
+    rewrite: bool = False
+) -> OrderDict | ErrorsDict:
     """
-    
+    Обновляет список студентов, закреплённых за заказом.
+
+    :param order_id: UID заказа, чьи параметры подлежат обновлению.
+    :param new_students_pinned: Список с новыми UID студентов.
+    :param rewrite: Если :code:`False`, то прибавит с текущему списку закреплённых студентов пользователя новые, данные в параметре :code:`new_students_pinned`. Иначе совершит перезапись.
+    :return OrderDict: Успех.
+    :return ErrorsDict: Ошибка со стороны БД.
     """
     db = get_db()
 
@@ -158,6 +194,13 @@ async def change_students(
         _, err = await db.users.read(id=student_id)
         if err:
             return {"error": [f"Ошибка при поиске студента UID-{student_id} - {err}"]}
+
+    order, err = await db.orders.read(id=order_id)
+    if err:
+        return {'error': [f'Ошибка при чтении заказа OID-{order_id} - {err}']}
+    if not rewrite and order.students_pinned:
+        new_students_pinned = new_students_pinned + order.students_pinned
+    new_students_pinned = list(set(new_students_pinned))
 
     updated_order, err = await db.orders.update(
         order_id,
@@ -168,10 +211,14 @@ async def change_students(
     return dict(vars(updated_order))
 
 async def delete(
-    order_id: int
-) -> dict:
+    order_id: OrderId
+) -> BoolResultDict | ErrorsDict:
     """
-    
+    Удаление заказа.
+
+    :param order_id: UID удаляемой учётной записи.
+    :return BoolResultDict: Результат изменений.
+    :return ErrorsDict: Ошибка со стороны БД.
     """
     db = get_db()
 
