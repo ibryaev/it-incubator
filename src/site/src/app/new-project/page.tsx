@@ -41,11 +41,17 @@ export default function NewProjectPage() {
       return setError("Сессия устарела. Перезайдите в аккаунт.");
     }
 
-    setIsLoading(true);
-
-    // Склеиваем ТЗ
     const techspec = `Тип продукта: ${productType || "Не указан"}\nОриентировочный бюджет/сроки: ${budget || "Не указаны"}\n\nОписание задачи:\n${description}`;
 
+    // Проверка ДО отправки, тем же правилом, что на бэке
+    if (techspec.trim().length < 128) {
+      return setError(
+        `Описание слишком короткое (${techspec.trim().length}), минимум: 128 символов. Расскажите о задаче подробнее.`
+      );
+    }
+
+    setIsLoading(true);
+    
     try {
       const res = await fetch("/api/orders/create", {
         method: "POST",
@@ -53,7 +59,7 @@ export default function NewProjectPage() {
         // FastAPI ожидает именно такую структуру из двух моделей:
         body: JSON.stringify({
           customer: { email: user.email, password: user.passwordRaw },
-          new_order: { title: title.trim(), techspec: techspec }  // ✅ ПРАВИЛЬНО
+          new_order: { title: title.trim(), techspec }
         })
       });
 
@@ -98,19 +104,29 @@ export default function NewProjectPage() {
             <p className="text-gray-400 text-sm md:text-base">Опишите вашу идею, и мы свяжемся с вами для обсуждения деталей.</p>
           </motion.div>
 
-          <motion.div variants={fadeInUp} className="space-y-4">
-            <GlassInput type="text" placeholder="Название проекта (обязательно)" value={title} onChange={e => setTitle(e.target.value)} />
-            <GlassInput type="text" placeholder="Тип продукта (Сайт, Приложение, Telegram-бот)" value={productType} onChange={e => setProductType(e.target.value)} />
-            <GlassInput type="text" placeholder="Ориентировочный бюджет или сроки (опционально)" value={budget} onChange={e => setBudget(e.target.value)} />
-            
-            <textarea 
-              placeholder="Краткое описание задачи... (обязательно)"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              className="w-full px-6 py-4 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 focus:bg-white/[0.05] backdrop-blur-md transition-all duration-300 resize-none h-32"
-            />
-            {error && <p className="text-red-400 text-[11px] italic text-center bg-red-500/10 py-2 rounded-lg border border-red-500/20">{error}</p>}
-          </motion.div>
+          {(() => {
+            const techspec = `Тип продукта: ${productType || "Не указан"}\nОриентировочный бюджет/сроки: ${budget || "Не указаны"}\n\nОписание задачи:\n${description}`;
+            const techspecLen = techspec.trim().length;
+            const isTechspecOk = techspecLen >= 128;
+
+            return (
+              <motion.div variants={fadeInUp} className="space-y-4">
+                <GlassInput type="text" placeholder="Название проекта (обязательно)" value={title} onChange={e => setTitle(e.target.value)} />
+                <GlassInput type="text" placeholder="Тип продукта (Сайт, Приложение, Telegram-бот)" value={productType} onChange={e => setProductType(e.target.value)} />
+                <GlassInput type="text" placeholder="Ориентировочный бюджет или сроки (опционально)" value={budget} onChange={e => setBudget(e.target.value)} />
+                <textarea 
+                  placeholder="Краткое описание задачи... (обязательно)"
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  className="w-full px-6 py-4 rounded-xl bg-white/[0.03] border border-white/10 text-white placeholder:text-gray-500 focus:outline-none focus:border-white/20 focus:bg-white/[0.05] backdrop-blur-md transition-all duration-300 resize-none h-32"
+                />
+                <p className={`text-right text-[10px] ${isTechspecOk ? "text-green-500" : "text-gray-600"}`}>
+                  {techspecLen}/128
+                </p>
+                {error && <p className="text-red-400 text-[11px] italic text-center bg-red-500/10 py-2 rounded-lg border border-red-500/20">{error}</p>}
+              </motion.div>
+            );
+          })()}
 
           <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row items-center justify-between gap-6">
             <Link href="/dashboard" className="text-sm text-gray-400 hover:text-white transition-colors border-b border-gray-400/30 hover:border-white order-2 sm:order-1">
