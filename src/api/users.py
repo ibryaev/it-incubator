@@ -182,16 +182,26 @@ async def user_update_bio(
 
 @router.post("/users/update/avatar")
 async def user_update_avatar(
-    user_id: int = Header(..., alias="user_id"),
+    request: UserLogin,
     file: Optional[UploadFile] = File(...)
 ):
+    user = await methods.users.login(
+        request.email,
+        request.password
+    )
+    if "error" in user:
+        raise HTTPException(403, user['error'])
+
     db = get_db()
+    user_id: int = user['id']
+
     avatars_dir = SITE_PUBLIC_DIR / "avatars"
     avatars_dir.mkdir(parents=True, exist_ok=True)
     file_path = avatars_dir / f"user_{user_id}.jpg"
+    url = f"/avatars/user_{user_id}.jpg"
+
     with open(file_path, "wb") as buffer:
         copyfileobj(file.file, buffer)
-    url = f"/avatars/user_{user_id}.jpg"
 
     user, err = await db.users.update(
         user_id,
