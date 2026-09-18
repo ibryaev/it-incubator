@@ -86,7 +86,7 @@ async def register_account(
     if errors:
         return {"error": errors}
 
-    new_user, err = await db.user_create(
+    new_user, err = await db.users.create(
         email,
         password_hash,
         first_name,
@@ -125,7 +125,7 @@ async def login_account(
     if len(password) < PASSWORD_MIN_LEN:
         return {"error": ["Пароль слишком короткий"]}
 
-    user, err = await db.user_read(email=email)
+    user, err = await db.users.read(email=email)
     if err:
         return {"error": ["Неверная почта или пароль"]}
 
@@ -140,7 +140,7 @@ async def login_account(
         old_password_hash = user.password_hash
         if ph.check_needs_rehash(user.password_hash):
             password_hash = ph.hash(password)
-            user, err = await db.user_update(
+            user, err = await db.users.update(
                 user.id,
                 password_hash=password_hash
             )
@@ -159,7 +159,7 @@ async def read_account(
     """
     db = get_db()
 
-    user, err = await db.user_read(id=user_id)
+    user, err = await db.users.read(id=user_id)
     if err:
         return {"error": [err]}
     return dict(vars(user))
@@ -202,7 +202,7 @@ async def search_accounts(
     if not searches:
         return {"error": ["Нужно уточнить хотябы один параметр поиска"]}
 
-    users, err = await db.user_readall(**searches)
+    users, err = await db.users.readall(**searches)
     if err:
         return {"error": [err]}
     result = {"users": []}
@@ -230,7 +230,7 @@ async def update_account_email(
     if new_email.endswith(EMAIL_RESTRICTED_DOMAINS):
         return {"error": ["Недопустимая почта"]}
 
-    user, err = await db.user_update(
+    user, err = await db.users.update(
         user_id,
         email=new_email
     )
@@ -250,7 +250,7 @@ async def update_account_password(
     """
     db = get_db()
 
-    user, err = await db.user_read(id=user_id)
+    user, err = await db.users.read(id=user_id)
     if err:
         return {"error": [err]}
 
@@ -269,7 +269,7 @@ async def update_account_password(
         return {"error": ["Слишком простой пароль"]}
 
     new_password_hash = ph.hash(new_password)
-    user, err = await db.user_update(
+    user, err = await db.users.update(
         user_id,
         password_hash=new_password_hash
     )
@@ -315,14 +315,14 @@ async def update_account_names(
         return {"error": errors}
 
     if new_first_name:
-        user, err = await db.user_update(
+        user, err = await db.users.update(
             user_id,
             True,
             first_name=new_first_name,
             last_name=new_last_name
         )
     else:
-        user, err = await db.user_update(
+        user, err = await db.users.update(
             user_id,
             True,
             last_name=new_last_name
@@ -351,7 +351,7 @@ async def update_account_bio(
         if new_bio and len(new_bio) > BIO_MAX_LEN:
             return {"error": ["Описание слишком длинное"]}
 
-    updated_user, err = await db.user_update(
+    updated_user, err = await db.users.update(
         user_id,
         True,
         bio=new_bio
@@ -389,7 +389,7 @@ async def update_account_spec(
             spec = None
 
         if spec is not None:
-            user, err = await db.user_read(id=user_id)
+            user, err = await db.users.read(id=user_id)
             if err:
                 return {"error": [err]}
 
@@ -399,7 +399,7 @@ async def update_account_spec(
                 pass
             spec = set(spec)
 
-    updated_user, err = await db.user_update(
+    updated_user, err = await db.users.update(
         user_id,
         True,
         spec=spec
@@ -419,7 +419,7 @@ async def delete_account(
     """
     db = get_db()
 
-    result, err = await db.user_delete(user_id)
+    result, err = await db.users.delete(user_id)
     if err:
         return {"error": [err]}
     return {"result": result}

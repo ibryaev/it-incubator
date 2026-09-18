@@ -6,7 +6,6 @@ from psycopg.rows import dict_row
 from psycopg.errors import UndefinedColumn
 from psycopg.types.enum import register_enum, EnumInfo
 
-
 from config import (
     DB_HOST, DB_DBNAME, DB_PORT, DB_USER, DB_PASSWORD,
     USER_ROLE_DEFAULT
@@ -15,35 +14,15 @@ from typedefs import UserRole, UserSpec, OrderStatus
 from models import User, Order
 
 
-class DbQuery():
-    def __init__(self, conn: AsyncConnection) -> None:
-        self.conn=conn
+class TableUsers:
+    """
+    Таблица с пользователями (:code:`users`).
+    """
 
-    @classmethod
-    async def connect(cls) -> DbQuery:
-        conn = await AsyncConnection.connect(
-            host        = DB_HOST,
-            dbname      = DB_DBNAME,
-            port        = DB_PORT,
-            user        = DB_USER,
-            password    = DB_PASSWORD,
-            row_factory = dict_row
-        )
+    def __init__(self, conn: AsyncConnection):
+        self._conn=conn
 
-        role_info = await EnumInfo.fetch(conn, "user_role_type")
-        spec_info = await EnumInfo.fetch(conn, "user_spec_type")
-        status_info = await EnumInfo.fetch(conn, "order_status_type")
-        register_enum(role_info, conn, UserRole)
-        register_enum(spec_info, conn, UserSpec)
-        register_enum(status_info, conn, OrderStatus)
-
-        return cls(conn)
-
-    #####################
-    #   Таблица users   #
-    #####################
-
-    async def user_create(
+    async def create(
         self,
         email: str,
         password: str,
@@ -64,7 +43,7 @@ class DbQuery():
         :return: Возвращает :class:`src.utils.types.user.User`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе Класс будет :code:`None`.
         """
         try:
-            async with self.conn.cursor() as cur:
+            async with self._conn.cursor() as cur:
                 await cur.execute(
                     """
                     SELECT 1 FROM users WHERE email = %s
@@ -85,16 +64,16 @@ class DbQuery():
                 )
                 new_user = await cur.fetchone()
                 if new_user is None:
-                    await self.conn.rollback()
+                    await self._conn.rollback()
                     return None, "Непредвиденная ошибка. Пользователь не был создан. Сообщите об этой ошибке"
-                await self.conn.commit()
+                await self._conn.commit()
                 return User(**new_user), None
         except Exception as e:
             print(f"database: user_create(): Ошибка: {e}")
-            await self.conn.rollback()
+            await self._conn.rollback()
             return None, str(e)
 
-    async def user_read(
+    async def read(
         self,
         allow_None_values: bool = False,
         **kwargs
@@ -122,7 +101,7 @@ class DbQuery():
 
         # Выполнение
         try:
-            async with self.conn.cursor() as cur:
+            async with self._conn.cursor() as cur:
                 await cur.execute(query, params)
                 user = await cur.fetchone()
                 if user is None:
@@ -135,7 +114,7 @@ class DbQuery():
             print(f"database: user_read(): Ошибка: {e}")
             return None, str(e)
 
-    async def user_readall(
+    async def readall(
         self,
         allow_None_values: bool = False,
         **kwargs
@@ -163,7 +142,7 @@ class DbQuery():
 
         # Выполнение
         try:
-            async with self.conn.cursor() as cur:
+            async with self._conn.cursor() as cur:
                 await cur.execute(query, params)
                 users = await cur.fetchall()
                 if users is None:
@@ -179,7 +158,7 @@ class DbQuery():
             print(f"database: user_readall(): Ошибка: {e}")
             return None, str(e)
 
-    async def user_update(
+    async def update(
         self,
         user_id: int,
         allow_None_values: bool = False,
@@ -207,24 +186,24 @@ class DbQuery():
             query = sql.SQL("UPDATE users SET {} WHERE id = %s RETURNING *").format(sql.SQL(", ").join(columns))
             params.append(user_id)
 
-            async with self.conn.cursor() as cur:
+            async with self._conn.cursor() as cur:
                 await cur.execute(query, params)
                 updated_user = await cur.fetchone()
                 if updated_user is None:
-                    await self.conn.rollback()
+                    await self._conn.rollback()
                     return None, "Непредвиденная ошибка. Пользователь не был обновлён. Сообщите об этой ошибке"
-                await self.conn.commit()
+                await self._conn.commit()
                 return User(**updated_user), None
         except UndefinedColumn as e:
             print(f"database: user_update(): Ошибка: В **kwargs передана несуществующая колонка ({e})")
-            await self.conn.rollback()
+            await self._conn.rollback()
             return None, str(e)
         except Exception as e:
             print(f"database: user_update(): Ошибка: {e}")
-            await self.conn.rollback()
+            await self._conn.rollback()
             return None, str(e)
 
-    async def user_delete(
+    async def delete(
         self,
         user_id: int
     ) -> Tuple[Optional[bool], Optional[str]]:
@@ -234,7 +213,7 @@ class DbQuery():
         :return: Возвращает :code:`True` в случае успеха. Иначе :code:`False`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе :code:`bool` будет :code:`None`.
         """
         try:
-            async with self.conn.cursor() as cur:
+            async with self._conn.cursor() as cur:
                 await cur.execute(
                     """
                     DELETE FROM users WHERE id = %s
@@ -245,18 +224,23 @@ class DbQuery():
                 if cur.rowcount == 0:
                     return False, None    
 
-                await self.conn.commit()
+                await self._conn.commit()
                 return True, None
         except Exception as e:
             print(f"database: user_delete(): Ошибка: {e}")
-            await self.conn.rollback()
+            await self._conn.rollback()
             return None, str(e)
 
-    #####################
-    #   Таблица orders  #
-    #####################
+class TableOrders:
+    """
+    Таблица с заказами (:code:`orders`).
+    """
 
-    async def order_create(
+    def __init__(self, conn: AsyncConnection, table_users: TableUsers) -> None:
+        self._conn=conn
+        self._users=table_users
+
+    async def create(
         self,
         title: str,
         techspec: str,
@@ -271,16 +255,10 @@ class DbQuery():
         :return: Возвращает :class:`src.utils.types.order.Order`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе Класс будет :code:`None`.
         """
         try:
-            async with self.conn.cursor() as cur:
-                await cur.execute(
-                    """
-                    SELECT 1 FROM users WHERE id = %s
-                    """,
-                    (customer_id,)
-                )
-                customer = await cur.fetchone()
-                if customer is None:
-                    return None, "Ошибка. Учётная запись с таким UID не найдена"
+            async with self._conn.cursor() as cur:
+                _, err = await self._users.read(id=customer_id)
+                if err:
+                    return None, err
 
                 await cur.execute(
                     """
@@ -292,16 +270,16 @@ class DbQuery():
                 )
                 new_order = await cur.fetchone()
                 if new_order is None:
-                    await self.conn.rollback()
+                    await self._conn.rollback()
                     return None, "Непредвиденная ошибка. Заказ не был создан. Сообщите об этой ошибке"
-                await self.conn.commit()
+                await self._conn.commit()
                 return Order(**new_order), None
         except Exception as e:
             print(F"database: order_create(): Ошибка: {e}")
-            await self.conn.rollback()
+            await self._conn.rollback()
             return None, str(e)
 
-    async def order_read(
+    async def read(
         self,
         allow_None_values: bool = False,
         **kwargs
@@ -329,7 +307,7 @@ class DbQuery():
 
         # Выполнение
         try:
-            async with self.conn.cursor() as cur:
+            async with self._conn.cursor() as cur:
                 await cur.execute(query, params)
                 order = await cur.fetchone()
                 if order is None:
@@ -342,7 +320,7 @@ class DbQuery():
             print(f"database: order_read(): Ошибка: {e}")
             return None, str(e)
 
-    async def order_readall(
+    async def readall(
         self,
         allow_None_values: bool = False,
         **kwargs
@@ -370,7 +348,7 @@ class DbQuery():
 
         # Выполнение
         try:
-            async with self.conn.cursor() as cur:
+            async with self._conn.cursor() as cur:
                 await cur.execute(query, params)
                 orders = await cur.fetchall()
                 if orders is None:
@@ -386,7 +364,7 @@ class DbQuery():
             print(f"database: order_readall(): Ошибка: {e}")
             return None, str(e)
 
-    async def order_update(
+    async def update(
         self,
         order_id: int,
         allow_None_values: bool = False,
@@ -414,24 +392,24 @@ class DbQuery():
             query = sql.SQL("UPDATE orders SET {} WHERE id = %s RETURNING *").format(sql.SQL(", ").join(columns))
             params.append(order_id)
 
-            async with self.conn.cursor() as cur:
+            async with self._conn.cursor() as cur:
                 await cur.execute(query, params)
                 updated_order = await cur.fetchone()
                 if updated_order is None:
-                    await self.conn.rollback()
+                    await self._conn.rollback()
                     return None, "Непредвиденная ошибка. Заказ не был обновлён. Сообщите об этой ошибке"
-                await self.conn.commit()
+                await self._conn.commit()
                 return Order(**updated_order), None
         except UndefinedColumn as e:
             print(f"database: order_update(): Ошибка: В **kwargs передана несуществующая колонка ({e})")
-            await self.conn.rollback()
+            await self._conn.rollback()
             return None, str(e)
         except Exception as e:
             print(f"database: order_update(): Ошибка: {e}")
-            await self.conn.rollback()
+            await self._conn.rollback()
             return None, str(e)
 
-    async def order_delete(
+    async def delete(
         self,
         order_id: int
     ) -> Tuple[Optional[bool], Optional[str]]:
@@ -441,7 +419,7 @@ class DbQuery():
         :return: Возвращает :code:`True` в случае успеха. Иначе :code:`False`, текст ошибки (:code:`err`). Если ошибок нет, то ошибка будет :code:`None`. Иначе :code:`bool` будет :code:`None`.
         """
         try:
-            async with self.conn.cursor() as cur:
+            async with self._conn.cursor() as cur:
                 await cur.execute(
                     """
                     DELETE FROM orders WHERE id = %s
@@ -452,9 +430,44 @@ class DbQuery():
                 if cur.rowcount == 0:
                     return False, None    
 
-                await self.conn.commit()
+                await self._conn.commit()
                 return True, None
         except Exception as e:
             print(f"database: order_delete(): Ошибка: {e}")
-            await self.conn.rollback()
+            await self._conn.rollback()
             return None, str(e)
+
+class DbQuery:
+    """Объект базы данных"""
+
+    conn: AsyncConnection
+    """Объект подключения к БД"""
+    users: TableUsers
+    """Таблица с пользователями"""
+    orders: TableOrders
+    """Таблица с заказами"""
+
+    def __init__(self, conn: AsyncConnection) -> None:
+        self.conn=conn
+        self.users=TableUsers(conn)
+        self.orders=TableOrders(conn, self.users)
+
+    @classmethod
+    async def connect(cls) -> DbQuery:
+        conn = await AsyncConnection.connect(
+            host        = DB_HOST,
+            dbname      = DB_DBNAME,
+            port        = DB_PORT,
+            user        = DB_USER,
+            password    = DB_PASSWORD,
+            row_factory = dict_row
+        )
+
+        user_role_type = await EnumInfo.fetch(conn, "user_role_type")
+        user_spec_type = await EnumInfo.fetch(conn, "user_spec_type")
+        order_status_type = await EnumInfo.fetch(conn, "order_status_type")
+        register_enum(user_role_type, conn, UserRole)
+        register_enum(user_spec_type, conn, UserSpec)
+        register_enum(order_status_type, conn, OrderStatus)
+
+        return cls(conn)

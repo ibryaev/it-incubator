@@ -55,7 +55,7 @@ async def order_create(
     if "error" in order:
         raise HTTPException(403, order['error'])
 
-    user, err = await db.user_update(
+    user, err = await db.users.update(
         user.id,
         orders_created=user.orders_created + [order['id']]
     )
@@ -185,7 +185,7 @@ async def order_update_preview(
         
     url = f"/previews/order_{order_id}.jpg"
 
-    order, err = await db.order_update(
+    order, err = await db.orders.update(
         order_id,
         preview_url=url
     )
@@ -326,7 +326,7 @@ async def order_delete(
     if "error" in order:
         raise HTTPException(403, order['error'])
 
-    user, err = await db.user_update(
+    user, err = await db.users.update(
         user.id,
         orders_created=user.orders_created - [order['id']]
     )

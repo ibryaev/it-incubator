@@ -217,7 +217,8 @@ async def user_update_avatar(
     with open(file_path, "wb") as buffer:
         copyfileobj(file.file, buffer)
     url = f"/avatars/user_{user_id}.jpg"
-    user, err = await db.user_update(
+
+    user, err = await db.users.update(
         user_id,
         avatar_url=url
     )

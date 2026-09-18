@@ -31,7 +31,7 @@ async def create_order(
     if len(techspec) < TECHSPEC_MIN_LEN:
         errors.append("Слишком короткое техническое задание")
 
-    new_order, err = await db.order_create(
+    new_order, err = await db.orders.create(
         title,
         techspec,
         customer_id
@@ -48,7 +48,7 @@ async def read_order(
     """
     db = get_db()
 
-    order, err = await db.order_read(id=order_id)
+    order, err = await db.orders.read(id=order_id)
     if err:
         return {"error": [err]}
     return dict(vars(order))
@@ -70,7 +70,7 @@ async def update_order_title(
     if len(new_title) > TITLE_MAX_LEN:
         return {"error": ["Слишком длинное название"]}
 
-    updated_order, err = await db.order_update(
+    updated_order, err = await db.orders.update(
         order_id,
          title=new_title
     )
@@ -93,7 +93,7 @@ async def update_order_techspec(
     if len(new_techspec) < TECHSPEC_MIN_LEN:
         return {"error": ["Слишком короткое техническое задание"]}
 
-    updated_order, err = await db.order_update(
+    updated_order, err = await db.orders.update(
         order_id,
         techspec=new_techspec
     )
@@ -116,7 +116,7 @@ async def update_order_status(
     if new_status not in order_status_tuple:
         return {"error": [f"Неизвестный статус - {new_status}"]}
 
-    updated_order, err = await db.order_update(
+    updated_order, err = await db.orders.update(
         order_id,
         status=new_status
     )
@@ -133,11 +133,11 @@ async def update_order_manager(
     """
     db = get_db()
 
-    _, err = await db.user_read(id=new_manager_id)
+    _, err = await db.users.read(id=new_manager_id)
     if err:
         return {"error": [err]}
 
-    updated_order, err = await db.order_update(
+    updated_order, err = await db.orders.update(
         order_id,
         manager_id=new_manager_id
     )
@@ -155,11 +155,11 @@ async def update_order_students(
     db = get_db()
 
     for student_id in new_students_pinned:
-        _, err = await db.user_read(id=student_id)
+        _, err = await db.users.read(id=student_id)
         if err:
             return {"error": [f"Ошибка при поиске студента UID-{student_id} - {err}"]}
 
-    updated_order, err = await db.order_update(
+    updated_order, err = await db.orders.update(
         order_id,
         students_pinned=new_students_pinned
     )
@@ -175,7 +175,7 @@ async def delete_order(
     """
     db = get_db()
 
-    result, err = await db.order_delete(order_id)
+    result, err = await db.orders.delete(order_id)
     if err:
         return {"error": [err]}
     return {"result": result}
