@@ -37,7 +37,7 @@ USER_ROLE_DEFAULT: str = UserRole.customer # По умолчанию 'customer'
 TITLE_MAX_LEN: int = 192 # По умолчанию 192
 """Максимальная длинна названия заказа"""
 TECHSPEC_MIN_LEN: int = 128 # По умолчанию 128
-"""Максимальная длинна технического задания заказа"""
+"""Минимальная длинна технического задания заказа"""
 ORDER_STATUS_DEFAULT: str = OrderStatus.created # По умолчанию 'created'
 """Статус заказа по умолчанию"""
 ZONEINFO_DEFAULT: ZoneInfo = ZoneInfo('Europe/Moscow') # По умолчанию 'Europe/Moscow'
