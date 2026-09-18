@@ -13,6 +13,9 @@ import methods
 from .users import UserLogin
 from singleton import get_db
 
+from pathlib import Path
+
+PUBLIC_DIR = Path(__file__).resolve().parent.parent / "site" / "public"
 
 router = APIRouter()
 
@@ -173,8 +176,9 @@ async def order_update_preview(
     if "error" in user:
         raise HTTPException(403, user['error'])
 
-    makedirs("src/site/public/previews", exist_ok=True)          # Хардкод
-    file_path = f"src/site/public/previews/order_{order_id}.jpg"    # Хардкод
+    previews_dir = PUBLIC_DIR / "previews"
+    previews_dir.mkdir(parents=True, exist_ok=True)
+    file_path = previews_dir / f"order_{order_id}.jpg"
     
     with open(file_path, "wb") as buffer:
         copyfileobj(file.file, buffer)

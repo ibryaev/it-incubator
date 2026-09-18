@@ -95,7 +95,7 @@ export default function DashboardPage() {
     const folder = isAvatar ? 'avatars' : 'previews';
     if (!cleanUrl.includes(folder)) cleanUrl = `/${folder}${cleanUrl}`;
     
-    return `/it-incubator${cleanUrl}${query ? `?${query}` : ''}`;
+    return `${cleanUrl}${query ? `?${query}` : ''}`;
   };
 
   const handleStartEdit = (target: "name" | "email" | "password", currentVal: string) => {
@@ -206,10 +206,20 @@ export default function DashboardPage() {
             </div>
             <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={async (e) => {
               const file = e.target.files?.[0]; if (!file) return;
-              const formData = new FormData(); formData.append("file", file);
-              const res = await fetch("/api/users/update/avatar", { method: "POST", headers: { "user_id": String(user.id) }, body: formData });
-              const data = await res.json(); 
-              if (res.ok) login({ ...user, avatar_url: data.avatar_url.split('?')[0] + `?t=${Date.now()}` });
+              const formData = new FormData();
+              formData.append("file", file);
+              const res = await fetch("/api/users/update/avatar", {
+                method: "POST",
+                headers: { "user_id": String(user.id) },
+                body: formData
+              });
+              const data = await res.json().catch(() => null);
+              if (!res.ok) {
+                console.error("Avatar upload failed:", res.status, data);
+                setError(`Не удалось загрузить аватар: ${res.status}`);
+                return;
+              }
+              login({ ...user, avatar_url: data.avatar_url.split('?')[0] + `?t=${Date.now()}` });
             }} />
           </div>
 

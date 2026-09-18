@@ -11,6 +11,9 @@ from config import FIRST_NAME_MAX_LEN, LAST_NAME_MAX_LEN, USER_ROLE_DEFAULT, PAS
 import methods
 from singleton import get_db
 
+from pathlib import Path
+
+PUBLIC_DIR = Path(__file__).resolve().parent.parent / "site" / "public"  # src/site/public
 
 router = APIRouter()
 
@@ -208,15 +211,12 @@ async def user_update_avatar(
     file: Optional[UploadFile] = File(...)
 ):
     db = get_db()
-
-    makedirs("src/site/public/avatars", exist_ok=True)
-    file_path = f"src/site/public/avatars/user_{user_id}.jpg"
-    
+    avatars_dir = PUBLIC_DIR / "avatars"
+    avatars_dir.mkdir(parents=True, exist_ok=True)
+    file_path = avatars_dir / f"user_{user_id}.jpg"
     with open(file_path, "wb") as buffer:
         copyfileobj(file.file, buffer)
-        
     url = f"/avatars/user_{user_id}.jpg"
-
     user, err = await db.user_update(
         user_id,
         avatar_url=url
