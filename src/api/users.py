@@ -22,7 +22,7 @@ async def user_register(
     Зарегистрировать учётную запись.  
     Принимает в :code:`Header` :class:`UserRegister`.
     """
-    user = await methods.register_account(
+    user = await methods.users.register(
         request.email,
         request.password,
         request.first_name,
@@ -42,7 +42,7 @@ async def user_login(
     Войти в учётную запись.  
     Принимает в :code:`Header` :class:`UserLogin`.
     """
-    user = await methods.login_account(
+    user = await methods.users.login(
         request.email,
         request.password
     )
@@ -57,7 +57,7 @@ async def user_read(
     """
     Получить данные учётной записи.
     """
-    user = await methods.read_account(user_id)
+    user = await methods.users.read(user_id)
     if "error" in user:
         raise HTTPException(403, user['error'])
     return user
@@ -70,7 +70,7 @@ async def user_search(
     Найти учётные записи по данным параметрам.  
     Принимает в :code:`Header` :class:`UserSearch`.
     """
-    users = await methods.search_accounts(
+    users = await methods.users.search(
         request.email,
         request.first_name,
         request.last_name,
@@ -91,14 +91,14 @@ async def user_update_email(
     Обновить электронную почту данной учётной записи.  
     Принимает в :code:`Header` :class:`UserLogin` и :code:`new_email: str`.
     """
-    user = await methods.login_account(
+    user = await methods.users.login(
         request.email,
         request.password
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
 
-    result = await methods.update_account_email(
+    result = await methods.users.change_email(
         user['id'],
         new_email
     )
@@ -115,14 +115,14 @@ async def user_update_password(
     Обновить пароль данной учётной записи.  
     Принимает в :code:`Header` :class:`UserLogin` и :code:`new_password: str` (данный пароль должен быть в незашифрованном виде).
     """
-    user = await methods.login_account(
+    user = await methods.users.login(
         request.email,
         request.password
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
 
-    result = await methods.update_account_password(
+    result = await methods.users.change_password(
         user['id'],
         new_password
     )
@@ -140,14 +140,14 @@ async def user_update_names(
     Обновить имя, фамилию данной учётной записи.  
     Принимает в :code:`Header` :class:`UserLogin`, :code:`new_first_name: str` и :code:`new_last_name: str`.
     """
-    user = await methods.login_account(
+    user = await methods.users.login(
         request.email,
         request.password
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
 
-    result = await methods.update_account_names(
+    result = await methods.users.change_names(
         user['id'],
         new_first_name,
         new_last_name
@@ -165,14 +165,14 @@ async def user_update_bio(
     Обновить поле "О себе" данной учётной записи.  
     Принимает в :code:`Header` :class:`UserLogin` и :code:`new_bio: str`.
     """
-    user = await methods.login_account(
+    user = await methods.users.login(
         request.email,
         request.password
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
 
-    result = await methods.update_account_bio(
+    result = await methods.users.change_bio(
         user['id'],
         new_bio
     )
@@ -210,14 +210,14 @@ async def user_update_spec(
     Обновить специальности данной учётной записи.  
     Принимает в :code:`Header` :class:`UserLogin` и :code:`new_spec: list[str]`.
     """
-    user = await methods.login_account(
+    user = await methods.users.login(
         request.email,
         request.password
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
 
-    result = await methods.update_account_spec(
+    result = await methods.users.change_spec(
         user['id'],
         new_spec,
         True
@@ -234,14 +234,14 @@ async def user_delete(
     Удаляет учётную запись.  
     Принимает в :code:`Header` :class:`UserLogin`.
     """
-    user = await methods.login_account(
+    user = await methods.users.login(
         request.email,
         request.password
     )
     if "error" in user:
         raise HTTPException(403, user['error'])
 
-    result = await methods.delete_account(user['id'])
+    result = await methods.users.delete(user['id'])
     if "error" in result:
         raise HTTPException(403, result['error'])
     return result

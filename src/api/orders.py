@@ -8,9 +8,8 @@ from config import (
     SITE_PUBLIC_DIR,
     user_role_tuple, user_role_text
 )
-from models import User, OrderCreate
+from models import User, UserLogin, OrderCreate
 import methods
-from .users import UserLogin
 from singleton import get_db
 
 
@@ -31,7 +30,7 @@ async def order_create(
     """
     db = get_db()
 
-    user = await methods.login_account(
+    user = await methods.users.login(
         customer.email,
         customer.password
     )
@@ -39,7 +38,7 @@ async def order_create(
         raise HTTPException(403, user['error'])
     user = User(**user)
 
-    order = await methods.create_order(
+    order = await methods.orders.create(
         new_order.title,
         new_order.techspec,
         user.id
@@ -66,7 +65,7 @@ async def order_read(
     :param order_id: ID искомого заказа.
     :return: В случае неуспеха вернёт ошибку 403. Иначе - данные найденного заказа.
     """
-    order = await methods.read_order(order_id)
+    order = await methods.orders.read(order_id)
     if "error" in order:
         raise HTTPException(403, order['error'])
     return order
@@ -89,11 +88,11 @@ async def order_update_title(
     :param new_title: Новое название заказа.
     :return: В случае неуспеха вернёт ошибку 403. Иначе - данные заказа, с обновлёнными данными.
     """
-    order = await methods.read_order(order_id)
+    order = await methods.orders.read(order_id)
     if "error" in order:
         raise HTTPException(403, order['error'])
 
-    user = await methods.login_account(
+    user = await methods.users.login(
         request.email,
         request.password
     )
@@ -102,7 +101,7 @@ async def order_update_title(
     if user['id'] != order['customer_id'] or user['role'] not in user_role_tuple[-1]:
         raise HTTPException(403, f"Только {user_role_text['customer']} и {user_role_text['admin']} могут переименовать заказ")
 
-    updated_order = await methods.update_order_title(
+    updated_order = await methods.orders.change_title(
         order_id,
         new_title
     )
@@ -124,11 +123,11 @@ async def order_update_techspec(
     :param new_techspec: Новое техническое задание заказа.
     :return: В случае неуспеха вернёт ошибку 403. Иначе - данные заказа, с обновлёнными данными.
     """
-    order = await methods.read_order(order_id)
+    order = await methods.orders.read(order_id)
     if "error" in order:
         raise HTTPException(403, order['error'])
 
-    user = await methods.login_account(
+    user = await methods.users.login(
         request.email,
         request.password
     )
@@ -137,7 +136,7 @@ async def order_update_techspec(
     if user['id'] != order['customer_id'] or user['role'] not in user_role_tuple[-1]:
         raise HTTPException(403, f"Только {user_role_text['customer']} и {user_role_text['admin']} могут изменить ТЗ заказа")
 
-    updated_order = await methods.update_order_techspec(
+    updated_order = await methods.orders.change_techspec(
         order_id,
         new_techspec
     )
@@ -161,7 +160,7 @@ async def order_update_preview(
     """
     db = get_db()
 
-    user = await methods.login_account(
+    user = await methods.users.login(
         request.email,
         request.password
     )
@@ -199,11 +198,11 @@ async def order_update_status(
     :param new_status: Новая статус заказа. В формате :data:`..utils.utils.order_status_type`.
     :return: В случае неуспеха вернёт ошибку 403. Иначе - данные заказа, с обновлёнными данными.
     """
-    order = await methods.read_order(order_id)
+    order = await methods.orders.read(order_id)
     if "error" in order:
         raise HTTPException(403, order['error'])
 
-    user = await methods.login_account(
+    user = await methods.users.login(
         request.email,
         request.password
     )
@@ -212,7 +211,7 @@ async def order_update_status(
     if user['id'] != order['manager_id'] or user['role'] not in user_role_tuple[-1]:
         raise HTTPException(403, f"Только {user_role_text['manager']} и {user_role_text['admin']} могут изменить статус заказа")
 
-    updated_order = await methods.update_order_status(
+    updated_order = await methods.orders.change_status(
         order_id,
         new_status
     )
@@ -234,11 +233,11 @@ async def order_update_manager(
     :param new_manager_id: UID нового менеджера заказа.
     :return: В случае неуспеха вернёт ошибку 403. Иначе - данные заказа, с обновлёнными данными.
     """
-    order = await methods.read_order(order_id)
+    order = await methods.orders.read(order_id)
     if "error" in order:
         raise HTTPException(403, order['error'])
 
-    user = await methods.login_account(
+    user = await methods.users.login(
         admin.email,
         admin.password
     )
@@ -247,7 +246,7 @@ async def order_update_manager(
     if user['role'] not in user_role_tuple[-1]:
         raise HTTPException(403, f"Только {user_role_text['admin']} может изменить {user_role_text['manager']}а заказа")
 
-    updated_order = await methods.update_order_manager(
+    updated_order = await methods.orders.change_manager(
         order_id,
         new_manager_id
     )
@@ -269,11 +268,11 @@ async def order_update_students(
     :param new_students_pinned: Новый список (:code:`list`) с UIDs прикреплённых исполнителей (студентов) к заказу. Перезаписывает существующий список!
     :return: В случае неуспеха вернёт ошибку 403. Иначе - данные заказа, с обновлёнными данными.
     """
-    order = await methods.read_order(order_id)
+    order = await methods.orders.read(order_id)
     if "error" in order:
         raise HTTPException(403, order['error'])
 
-    user = await methods.login_account(
+    user = await methods.users.login(
         admin.email,
         admin.password
     )
@@ -282,7 +281,7 @@ async def order_update_students(
     if user['id'] != order['manager_id'] or user['role'] not in user_role_tuple[-1]:
         raise HTTPException(403, f"Только {user_role_text['manager']} и {user_role_text['admin']} может список исполнителей, закреплённых за заказом")
 
-    updated_order = await methods.update_order_students(
+    updated_order = await methods.orders.change_students(
         order_id,
         new_students_pinned
     )
@@ -304,7 +303,7 @@ async def order_delete(
     """
     db = get_db()
 
-    user = await methods.login_account(
+    user = await methods.users.login(
         request.email,
         request.password
     )
@@ -314,7 +313,7 @@ async def order_delete(
     if user.role != user_role_tuple[-1]:
         raise HTTPException(403, f"Только {user_role_text['admin']} может удалить заказ")
 
-    order = await methods.read_order(order_id)
+    order = await methods.orders.read(order_id)
     if "error" in order:
         raise HTTPException(403, order['error'])
 
@@ -325,7 +324,7 @@ async def order_delete(
     if err:
         return {"error": [err]}
 
-    result = await methods.delete_order(order_id)
+    result = await methods.orders.delete(order_id)
     if "error" in result:
         raise HTTPException(403, result['err'])
     return result

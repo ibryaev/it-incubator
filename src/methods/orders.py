@@ -8,7 +8,7 @@ from config import (
 from singleton import get_db
 
 
-async def create_order(
+async def create(
     title: str,
     techspec: str,
     customer_id: int
@@ -40,7 +40,7 @@ async def create_order(
         return {"error": [err]}
     return dict(vars(new_order))
 
-async def read_order(
+async def read(
     order_id: int
 ) -> dict:
     """
@@ -55,7 +55,7 @@ async def read_order(
 
 # async def search_orders()
 
-async def update_order_title(
+async def change_title(
     order_id: int,
     new_title: str
 ) -> dict:
@@ -78,7 +78,7 @@ async def update_order_title(
         return {"error": [err]}
     return dict(vars(updated_order))
 
-async def update_order_techspec(
+async def change_techspec(
     order_id: int,
     new_techspec: str
 ) -> dict:
@@ -101,7 +101,7 @@ async def update_order_techspec(
         return {"error": [err]}
     return dict(vars(updated_order))
 
-async def update_order_status(
+async def change_status(
     order_id: int,
     new_status: str
 ) -> dict:
@@ -124,7 +124,7 @@ async def update_order_status(
         return {"error": [err]}
     return dict(vars(updated_order))
 
-async def update_order_manager(
+async def change_manager(
     order_id: int,
     new_manager_id: int
 ) -> dict:
@@ -145,7 +145,7 @@ async def update_order_manager(
         return {"error": [err]}
     return dict(vars(updated_order))
 
-async def update_order_students(
+async def change_students(
     order_id: int,
     new_students_pinned: Optional[list[int]]
 ) -> dict:
@@ -167,7 +167,7 @@ async def update_order_students(
         return {"error": [err]}
     return dict(vars(updated_order))
 
-async def delete_order(
+async def delete(
     order_id: int
 ) -> dict:
     """

@@ -7,9 +7,11 @@ from config import EMAIL_RESTRICTED_DOMAINS, FIRST_NAME_MAX_LEN, LAST_NAME_MAX_L
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
+
 ph = PasswordHasher()
 
-async def register_account(
+
+async def register(
     email: str,
     password: str,
     first_name: str,
@@ -98,7 +100,7 @@ async def register_account(
         return {"error": [err]}
     return dict(vars(new_user))
 
-async def login_account(
+async def login(
     email: str,
     password: str
 ) -> dict:
@@ -148,7 +150,7 @@ async def login_account(
                 user.password_hash = old_password_hash
         return dict(vars(user))
 
-async def read_account(
+async def read(
     user_id: int
 ) -> dict:
     """
@@ -164,7 +166,7 @@ async def read_account(
         return {"error": [err]}
     return dict(vars(user))
 
-async def search_accounts(
+async def search(
     email: Optional[str],
     first_name: Optional[str],
     last_name: Optional[str],
@@ -210,7 +212,7 @@ async def search_accounts(
         result["users"].append(dict(vars(user)))
     return result
 
-async def update_account_email(
+async def change_email(
     user_id: int,
     new_email: str
 ) -> dict:
@@ -238,7 +240,7 @@ async def update_account_email(
         return {"error": [err]}
     return dict(vars(user))
 
-async def update_account_password(
+async def change_password(
     user_id: int,
     new_password: str
 ) -> dict:
@@ -277,7 +279,7 @@ async def update_account_password(
         return {"error": [err]}
     return dict(vars(user))
 
-async def update_account_names(
+async def change_names(
     user_id: int,
     new_first_name: Optional[str] = None,
     new_last_name: Optional[str] = None
@@ -331,7 +333,7 @@ async def update_account_names(
         return {"error": [err]}
     return dict(vars(user))
 
-async def update_account_bio(
+async def change_bio(
     user_id: int,
     new_bio: Optional[str] = None
 ) -> dict:
@@ -360,7 +362,7 @@ async def update_account_bio(
         return {"error": [err]}
     return dict(vars(updated_user))
 
-async def update_account_spec(
+async def change_spec(
     user_id: int,
     spec: Optional[list[str]],
     rewrite: bool = False
@@ -408,7 +410,7 @@ async def update_account_spec(
         return {"error": [err]}
     return dict(vars(updated_user))
 
-async def delete_account(
+async def delete(
     user_id: int,
 ) -> dict:
     """
