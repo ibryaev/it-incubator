@@ -55,7 +55,8 @@ async def register(
     password = password.strip()
     res = check_password(password)
     if res: errors.append(res)
-    if password.casefold() in (email.casefold(), first_name.casefold(), last_name.casefold(), f"{first_name} {last_name}".casefold()):
+    user_last_name: str = last_name or first_name
+    if password.casefold() in (email.casefold(), first_name.casefold(), user_last_name.casefold(), f"{first_name} {last_name}".casefold()):
         errors.append("Пароль небезопасный")
     password_hash = ph.hash(password)
 
@@ -263,13 +264,7 @@ async def change_password(
     if res: return {'error': [res]}
 
     user_last_name: str = user.last_name or user.first_name
-    personal_data = (
-        user.email.casefold(),
-        user.first_name.casefold(),
-        user_last_name.casefold(),
-        user.full_name.casefold()
-    )
-    if new_password.casefold() in personal_data:
+    if new_password.casefold() in (user.email.casefold(), user.first_name.casefold(), user_last_name.casefold(), user.full_name.casefold()):
         return {"error": ["Слишком простой пароль"]}
 
     new_password_hash = ph.hash(new_password)
