@@ -43,7 +43,7 @@ ORDER_STATUS_DEFAULT: str = OrderStatus.created # По умолчанию 'creat
 ZONEINFO_DEFAULT: ZoneInfo = ZoneInfo('Europe/Moscow') # По умолчанию 'Europe/Moscow'
 """Часовой пояс по умолчанию"""
 
-SITE_PUBLIC_DIR = Path(__file__).resolve().parent / "site" / "public"   # = /root/it-incubator/src/site/public
+SITE_PUBLIC_DIR = Path("/var/www/it-incubator-uploads")
 """Путь до :code:`src/site/public`"""
 
 
