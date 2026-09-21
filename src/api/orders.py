@@ -55,7 +55,7 @@ async def order_create(
 
     return order
 
-@router.get("/orders/read/{order-id}")
+@router.get("/orders/read/{order_id}")
 async def order_read(
     order_id: int
 ) -> dict:
