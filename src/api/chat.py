@@ -259,34 +259,41 @@ def _order_dict(o) -> dict:
     return o if isinstance(o, dict) else dict(vars(o))
 
 async def _read_order(order_id: int) -> dict:
-    """Адаптер: читает заявку через methods, независимо от структуры модуля."""
-    fn = getattr(methods, "read_order", None) or getattr(getattr(methods, "orders", None), "read_order", None)
-    return await fn(order_id)
+    """Читает заказ через актуальный methods API."""
+    return await methods.orders.read(order_id)
 
 
 async def _visible_orders(user: dict) -> list[dict]:
     """Заявки, которые данная роль вправе видеть."""
-    db = get_db()
     role = user.get("role")
     orders: list[dict] = []
 
-    if role == "admin":
-        rows, err = await db.order_readall()
-        if not err and rows:
-            orders = [_order_dict(o) for o in sorted(rows, key=lambda o: o.id, reverse=True)[:10]]
-    elif role == "manager":
-        rows, err = await db.order_readall(manager_id=user["id"])
-        if not err and rows:
-            orders = [_order_dict(o) for o in rows]
+    if role in ("admin", "manager"):
+        db = get_db()
+        readall = getattr(getattr(db, "orders", None), "readall", None) or getattr(db, "order_readall", None)
+        try:
+            if role == "admin":
+                rows, err = await readall()
+            else:
+                rows, err = await readall(manager_id=user["id"])
+            if not err and rows:
+                rows = [_order_dict(o) for o in rows]
+                rows.sort(key=lambda o: o["id"], reverse=True)
+                orders = rows[:10] if role == "admin" else rows
+        except Exception as e:
+            print(f"chat: _visible_orders({role}): {type(e).__name__}: {e}")
     else:
         ids = (user.get("orders_created") or []) if role == "customer" else (user.get("orders_pinned") or [])
         for oid in ids:
             try:
                 o = await _read_order(oid)
-            except Exception:
+            except Exception as e:
+                print(f"chat: read order {oid}: {type(e).__name__}: {e}")
                 continue
             if isinstance(o, dict) and "error" not in o:
                 orders.append(o)
+            else:
+                print(f"chat: order {oid}: {o.get('error') if isinstance(o, dict) else o}")
     return orders
 
 
