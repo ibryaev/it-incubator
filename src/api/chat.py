@@ -4,26 +4,99 @@ from typing import List, Optional
 import httpx
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
+import json
 
 import methods
 from singleton import get_db
 
-import re
-
-# --- Лимиты контекста заявок (защита от.token-абьюза) ---
-TS_LIMIT_OWN = 1500       # customer/student: собственные заявки
-TS_LIMIT_STAFF = 1000     # manager/admin
-MAX_TS_BLOCKS = 5         # максимум полных ТЗ за один запрос
-MAX_ORDERS_LISTED = 15    # максимум заявок в списке
-
-_ORDER_MENTION_RE = re.compile(
-    r"(?:заявк[а-яё]*|заказ[а-яё]*|order|№|#)\s*#?(\d{1,4})"
-    r"|(\d{1,4})\s*(?:заявк[а-яё]*|заказ[а-яё]*|order)",
-    re.IGNORECASE,
-)
-
 router = APIRouter(tags=["AI Chat"])
 
+MAX_TOOL_ROUNDS = 4          # защита от зацикливания tool-вызовов
+TOOL_TS_LIMIT = 4000         # лимит символов ТЗ в одном tool-ответе
+MAX_ORDERS_LISTED = 15       # максимум заявок в списке контекста/инструмента
+
+TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "list_my_orders",
+            "description": (
+                "Список заявок, доступных текущему пользователю по его роли: "
+                "id, название, статус, менеджер, исполнители, дата. Без полных ТЗ."
+            ),
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_order",
+            "description": (
+                "Полные данные одной заявки, включая техническое задание. "
+                "Доступна только заявка из набора, видимого текущему пользователю."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "order_id": {"type": "integer", "description": "ID заявки числом, например 10"},
+                },
+                "required": ["order_id"],
+            },
+        },
+    },
+]
+
+
+def _can_see_order(user: dict, o: dict) -> bool:
+    """Видит ли пользователь данную заявку по своей роли."""
+    role = user.get("role")
+    if role == "admin":
+        return True
+    if role == "manager":
+        return o.get("manager_id") == user["id"]
+    if role == "student":
+        return user["id"] in (o.get("students_pinned") or []) or o.get("customer_id") == user["id"]
+    return o.get("customer_id") == user["id"]
+
+
+def _order_header(o: dict) -> dict:
+    return {
+        "id": o["id"],
+        "title": o["title"],
+        "status": o["status"],
+        "manager_id": o.get("manager_id"),
+        "students_pinned": o.get("students_pinned") or [],
+        "date_reg": str(o.get("date_reg") or ""),
+    }
+
+
+async def _exec_tool(user: Optional[dict], name: str, args: dict) -> str:
+    """Исполняет tool-вызов модели. Всегда в скоупе текущего пользователя."""
+    if user is None:
+        return json.dumps({"error": "Пользователь не авторизован; инструменты недоступны"}, ensure_ascii=False)
+
+    if name == "list_my_orders":
+        orders = await _visible_orders(user)
+        return json.dumps(
+            {"orders": [_order_header(o) for o in orders[:MAX_ORDERS_LISTED]], "total": len(orders)},
+            ensure_ascii=False,
+        )
+
+    if name == "get_order":
+        oid = args.get("order_id")
+        if not isinstance(oid, int):
+            return json.dumps({"error": "order_id должен быть целым числом"}, ensure_ascii=False)
+        order = await methods.orders.read(oid)
+        if not isinstance(order, dict) or "error" in order:
+            return json.dumps({"error": f"Заявка #{oid} не найдена"}, ensure_ascii=False)
+        if not _can_see_order(user, order):
+            return json.dumps({"error": f"Заявка #{oid} недоступна этому пользователю"}, ensure_ascii=False)
+        result = _order_header(order)
+        ts = order.get("techspec") or ""
+        result["techspec"] = ts[:TOOL_TS_LIMIT] + (" …(обрезано)" if len(ts) > TOOL_TS_LIMIT else "")
+        return json.dumps(result, ensure_ascii=False)
+
+    return json.dumps({"error": f"Неизвестный инструмент: {name}"}, ensure_ascii=False)
 
 # --------------------------------------------------------------------------
 # Статическая база знаний. Динамические части: {api_reference}, {user_context}
@@ -106,6 +179,16 @@ student — студент-исполнитель; manager — менеджер 
   интерфейс сайта; (в) ты уверен, что API-способ заметно проще и удобнее для
   пользователя в его ситуации — и тогда кратко объясни, почему предлагаешь его.
 - Не предлагай API и не вываливай списки эндпоинтов по собственной инициативе.
+
+# Инструменты
+- У тебя есть инструменты list_my_orders и get_order(order_id).
+- Как только понял, о какой заявке речь (номер или название из сообщения, из истории
+  диалога или из списка), — сразу вызывай get_order сам. Не проси пользователя
+  «подгрузить», «написать номер ещё раз» или повторить вопрос.
+- Если непонятно, о какой заявке речь, — вызови list_my_orders и уточни коротким
+  вопросом, показав список.
+- Ответ инструмента «недоступна этому пользователю» означает границу приватности:
+  скажи, что не можешь рассказать про чужую заявку, и не пытайся обойти запрет.
 
 {api_reference}
 
@@ -296,28 +379,6 @@ async def _visible_orders(user: dict) -> list[dict]:
                 print(f"chat: order {oid}: {o.get('error') if isinstance(o, dict) else o}")
     return orders
 
-
-def _detect_focus_ids(messages: List[MessageItem], orders: list[dict]) -> list[int]:
-    """ID заявок, явно упомянутых в пользовательских сообщениях истории (номер или название)."""
-    titles = {o["id"]: (o.get("title") or "").lower() for o in orders}
-    found: list[int] = []
-    for msg in messages:
-        if msg.role != "user":
-            continue
-        text = msg.content or ""
-        low = text.lower()
-        for m in _ORDER_MENTION_RE.finditer(text):
-            raw = m.group(1) or m.group(2)
-            if not raw:
-                continue
-            oid = int(raw)
-            if oid in titles and oid not in found:
-                found.append(oid)
-        for oid, t in titles.items():
-            if len(t) >= 8 and t in low and oid not in found:
-                found.append(oid)
-    return found[-3:]   # держим не больше 3 заявок в фокусе
-
 async def build_user_context(user: Optional[dict], messages: List[MessageItem]) -> str:
     if not user:
         return (
@@ -337,39 +398,26 @@ async def build_user_context(user: Optional[dict], messages: List[MessageItem]) 
         f"- Специализации: {', '.join(user.get('spec') or []) or 'не указаны'}",
     ]
 
-    orders = await _visible_orders(user)
-    focus = _detect_focus_ids(messages, orders)
-    limit = TS_LIMIT_STAFF if user.get("role") in ("manager", "admin") else TS_LIMIT_OWN
-
     lines.append(f"Заявки, доступные ему по роли ({len(orders)}):")
     if not orders:
         lines.append("  - нет")
 
-    ts_blocks = 0
-    listed = 0
-    for o in orders:
-        if listed >= MAX_ORDERS_LISTED:
-            lines.append(f"  - … и ещё {len(orders) - MAX_ORDERS_LISTED} (не показаны)")
-            break
-        listed += 1
-        head = (
+    orders = await _visible_orders(user)
+    lines.append(f"Заявки, доступные ему по роли ({len(orders)}):")
+    if not orders:
+        lines.append("  - нет")
+    for o in orders[:MAX_ORDERS_LISTED]:
+        lines.append(
             f"  - #{o['id']} «{o['title']}» — статус: {o['status']}, "
             f"менеджер_id={o.get('manager_id') or 'не назначен'}, "
             f"исполнители={o.get('students_pinned') or []}"
         )
-        if o["id"] in focus and ts_blocks < MAX_TS_BLOCKS:
-            ts = o.get("techspec") or ""
-            if len(ts) > limit:
-                ts = ts[:limit] + f" …(ТЗ обрезано до {limit} символов)"
-            head += f"\n    ТЗ: {ts}"
-            ts_blocks += 1
-        lines.append(head)
-
+    if len(orders) > MAX_ORDERS_LISTED:
+        lines.append(f"  - … и ещё {len(orders) - MAX_ORDERS_LISTED} (инструмент list_my_orders)")
     if orders:
         lines.append(
-            "Полные ТЗ заявок не в фокусе в этот запрос не загружены: если собеседник "
-            "спросит детали другой заявки, он назовёт её номер или название — и её ТЗ "
-            "придёт в следующем запросе. Не выдумывай содержимое ТЗ, которого нет выше."
+            "Полные ТЗ и детали любой из этих заявок подгружай инструментом get_order(order_id), "
+            "как только понял, о какой заявке речь. Не выдумывай содержимое ТЗ, которое не получал."
         )
 
     return "\n".join(lines)
@@ -380,34 +428,26 @@ async def build_user_context(user: Optional[dict], messages: List[MessageItem]) 
 # --------------------------------------------------------------------------
 @router.post("/chat/ask")
 async def chat_ask(request: ChatRequest, raw: Request) -> dict:
-    """
-    Принимает историю диалога и (опционально) credentials авторизованного
-    пользователя. Системный промпт всегда один (первое сообщение), история
-    только дописывается.
-    """
-    
-
     api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
         raise HTTPException(status_code=500, detail="Ключ OpenRouter API не настроен на сервере")
 
-    # Валидируем credentials тем же способом, что и вся остальная API
     user: Optional[dict] = None
     if request.credentials:
         found = await methods.users.login(
             request.credentials.email,
             request.credentials.password,
         )
-        if "error" not in found:
-            user = found  # password_hash наружу не отдаём и в промпт не кладём
+        if isinstance(found, dict) and "error" not in found:
+            user = found
 
     system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
         api_reference=build_api_reference(raw.app, user.get("role") if user else None),
-        user_context=await build_user_context(user, request.messages),
+        user_context=await build_user_context(user),
     )
 
-    payload_messages = [{"role": "system", "content": system_prompt}]
-    payload_messages += [{"role": m.role, "content": m.content} for m in request.messages]
+    llm_messages: list[dict] = [{"role": "system", "content": system_prompt}]
+    llm_messages += [{"role": m.role, "content": m.content} for m in request.messages]
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -415,33 +455,66 @@ async def chat_ask(request: ChatRequest, raw: Request) -> dict:
         "X-Title": "IT-Incubator Assistant",
         "Content-Type": "application/json",
     }
-    payload = {
-        "model": "qwen/qwen3.8-flash",
-        "messages": payload_messages,
-    }
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            # Фаза инструментов: модель может вызвать tools несколько раз
+            for _ in range(MAX_TOOL_ROUNDS):
+                response = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers=headers,
+                    json={
+                        "model": os.getenv("OPENROUTER_MODEL", "qwen/qwen3.8-flash"),
+                        "messages": llm_messages,
+                        "tools": TOOLS,
+                        "tool_choice": "auto",
+                    },
+                )
+                response.raise_for_status()
+                msg = response.json()["choices"][0]["message"]
+
+                if not msg.get("tool_calls"):
+                    return {"reply": msg.get("content") or ""}
+
+                llm_messages.append(msg)  # ассистент с tool_calls — часть истории
+                for call in msg["tool_calls"]:
+                    fn = call.get("function", {})
+                    try:
+                        args = json.loads(fn.get("arguments") or "{}")
+                    except Exception:
+                        args = {}
+                    print(f"chat/ask: tool {fn.get('name')}({args})")
+                    tool_result = await _exec_tool(user, fn.get("name", ""), args)
+                    llm_messages.append({
+                        "role": "tool",
+                        "tool_call_id": call.get("id"),
+                        "name": fn.get("name"),
+                        "content": tool_result,
+                    })
+
+            # Лимит раундов исчерпан: финальный ответ без инструментов
             response = await client.post(
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers=headers,
-                json=payload,
+                json={
+                    "model": os.getenv("OPENROUTER_MODEL", "qwen/qwen3.8-flash"),
+                    "messages": llm_messages,
+                },
             )
             response.raise_for_status()
-            data = response.json()
-            return {"reply": data["choices"][0]["message"]["content"]}
+            return {"reply": response.json()["choices"][0]["message"].get("content") or ""}
 
     except httpx.HTTPStatusError as e:
         try:
             err = e.response.json().get("error", {})
-            msg = err.get("message", "без сообщения")
-            etype = (err.get("metadata") or {}).get("error_type")
+            msg = err.get("message", e.response.text[:200])
         except Exception:
-            msg, etype = e.response.text[:200], None
-        print(f"chat/ask: OpenRouter HTTP {e.response.status_code} [{etype}] {msg}")
-        raise HTTPException(
-            status_code=502,
-            detail=f"Ошибка внешнего API: {e.response.status_code} [{etype}] {msg}",
-        )
+            msg = e.response.text[:200]
+        print(f"chat/ask: OpenRouter HTTP {e.response.status_code}: {msg}")
+        raise HTTPException(status_code=502, detail=f"Ошибка внешнего API: {e.response.status_code}: {msg}")
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка при подключении к ИИ-серверу: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Внутренняя ошибка чата: {type(e).__name__}: {e}")
