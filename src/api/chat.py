@@ -6,6 +6,21 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 import methods
+from singleton import get_db
+
+import re
+
+# --- Лимиты контекста заявок (защита от.token-абьюза) ---
+TS_LIMIT_OWN = 1500       # customer/student: собственные заявки
+TS_LIMIT_STAFF = 1000     # manager/admin
+MAX_TS_BLOCKS = 5         # максимум полных ТЗ за один запрос
+MAX_ORDERS_LISTED = 15    # максимум заявок в списке
+
+_ORDER_MENTION_RE = re.compile(
+    r"(?:заявк[а-яё]*|заказ[а-яё]*|order|№|#)\s*#?(\d{1,4})"
+    r"|(\d{1,4})\s*(?:заявк[а-яё]*|заказ[а-яё]*|order)",
+    re.IGNORECASE,
+)
 
 router = APIRouter(tags=["AI Chat"])
 
@@ -136,6 +151,19 @@ ROLE_RU = {
     "admin": "Администратор",
 }
 
+class MessageItem(BaseModel):
+    role: str
+    content: str
+
+
+class ChatCredentials(BaseModel):
+    email: str
+    password: str
+
+
+class ChatRequest(BaseModel):
+    messages: List[MessageItem]
+    credentials: Optional[ChatCredentials] = None  # как UserLogin в остальной API
 
 # --------------------------------------------------------------------------
 # Генерация справочника API из OpenAPI-схемы (всегда актуальна)
@@ -226,7 +254,64 @@ def build_api_reference(app, role: Optional[str]) -> str:
 # --------------------------------------------------------------------------
 # Персональный контекст собеседника
 # --------------------------------------------------------------------------
-async def build_user_context(user: Optional[dict]) -> str:
+
+def _order_dict(o) -> dict:
+    return o if isinstance(o, dict) else dict(vars(o))
+
+async def _read_order(order_id: int) -> dict:
+    """Адаптер: читает заявку через methods, независимо от структуры модуля."""
+    fn = getattr(methods, "read_order", None) or getattr(getattr(methods, "orders", None), "read_order", None)
+    return await fn(order_id)
+
+
+async def _visible_orders(user: dict) -> list[dict]:
+    """Заявки, которые данная роль вправе видеть."""
+    db = get_db()
+    role = user.get("role")
+    orders: list[dict] = []
+
+    if role == "admin":
+        rows, err = await db.order_readall()
+        if not err and rows:
+            orders = [_order_dict(o) for o in sorted(rows, key=lambda o: o.id, reverse=True)[:10]]
+    elif role == "manager":
+        rows, err = await db.order_readall(manager_id=user["id"])
+        if not err and rows:
+            orders = [_order_dict(o) for o in rows]
+    else:
+        ids = (user.get("orders_created") or []) if role == "customer" else (user.get("orders_pinned") or [])
+        for oid in ids:
+            try:
+                o = await _read_order(oid)
+            except Exception:
+                continue
+            if isinstance(o, dict) and "error" not in o:
+                orders.append(o)
+    return orders
+
+
+def _detect_focus_ids(messages: List[MessageItem], orders: list[dict]) -> list[int]:
+    """ID заявок, явно упомянутых в пользовательских сообщениях истории (номер или название)."""
+    titles = {o["id"]: (o.get("title") or "").lower() for o in orders}
+    found: list[int] = []
+    for msg in messages:
+        if msg.role != "user":
+            continue
+        text = msg.content or ""
+        low = text.lower()
+        for m in _ORDER_MENTION_RE.finditer(text):
+            raw = m.group(1) or m.group(2)
+            if not raw:
+                continue
+            oid = int(raw)
+            if oid in titles and oid not in found:
+                found.append(oid)
+        for oid, t in titles.items():
+            if len(t) >= 8 and t in low and oid not in found:
+                found.append(oid)
+    return found[-3:]   # держим не больше 3 заявок в фокусе
+
+async def build_user_context(user: Optional[dict], messages: List[MessageItem]) -> str:
     if not user:
         return (
             "## Контекст собеседника\n"
@@ -245,35 +330,40 @@ async def build_user_context(user: Optional[dict]) -> str:
         f"- Специализации: {', '.join(user.get('spec') or []) or 'не указаны'}",
     ]
 
-    created: list[str] = []
-    for oid in user.get("orders_created") or []:
-        order = await methods.orders.read(oid)
-        if "error" not in order:
-            created.append(
-                f"  - #{order['id']} «{order['title']}» — статус: {order['status']}, "
-                f"менеджер_id={order.get('manager_id') or 'не назначен'}, "
-                f"исполнители={order.get('students_pinned') or []}"
-            )
+    orders = await _visible_orders(user)
+    focus = _detect_focus_ids(messages, orders)
+    limit = TS_LIMIT_STAFF if user.get("role") in ("manager", "admin") else TS_LIMIT_OWN
 
-    pinned: list[str] = []
-    for oid in user.get("orders_pinned") or []:
-        order = await methods.orders.read(oid)
-        if "error" not in order:
-            pinned.append(
-                f"  - #{order['id']} «{order['title']}» — статус: {order['status']}, "
-                f"заказчик_id={order.get('customer_id')}, "
-                f"менеджер_id={order.get('manager_id') or 'не назначен'}"
-            )
+    lines.append(f"Заявки, доступные ему по роли ({len(orders)}):")
+    if not orders:
+        lines.append("  - нет")
 
-    if created:
-        lines.append("Его заявки как заказчика:")
-        lines.extend(created)
-    else:
-        lines.append("Заявок как заказчик у него нет.")
+    ts_blocks = 0
+    listed = 0
+    for o in orders:
+        if listed >= MAX_ORDERS_LISTED:
+            lines.append(f"  - … и ещё {len(orders) - MAX_ORDERS_LISTED} (не показаны)")
+            break
+        listed += 1
+        head = (
+            f"  - #{o['id']} «{o['title']}» — статус: {o['status']}, "
+            f"менеджер_id={o.get('manager_id') or 'не назначен'}, "
+            f"исполнители={o.get('students_pinned') or []}"
+        )
+        if o["id"] in focus and ts_blocks < MAX_TS_BLOCKS:
+            ts = o.get("techspec") or ""
+            if len(ts) > limit:
+                ts = ts[:limit] + f" …(ТЗ обрезано до {limit} символов)"
+            head += f"\n    ТЗ: {ts}"
+            ts_blocks += 1
+        lines.append(head)
 
-    if pinned:
-        lines.append("Заявки, где он закреплён исполнителем:")
-        lines.extend(pinned)
+    if orders:
+        lines.append(
+            "Полные ТЗ заявок не в фокусе в этот запрос не загружены: если собеседник "
+            "спросит детали другой заявки, он назовёт её номер или название — и её ТЗ "
+            "придёт в следующем запросе. Не выдумывай содержимое ТЗ, которого нет выше."
+        )
 
     return "\n".join(lines)
 
@@ -281,21 +371,6 @@ async def build_user_context(user: Optional[dict]) -> str:
 # --------------------------------------------------------------------------
 # Эндпоинт чата
 # --------------------------------------------------------------------------
-class MessageItem(BaseModel):
-    role: str
-    content: str
-
-
-class ChatCredentials(BaseModel):
-    email: str
-    password: str
-
-
-class ChatRequest(BaseModel):
-    messages: List[MessageItem]
-    credentials: Optional[ChatCredentials] = None  # как UserLogin в остальной API
-
-
 @router.post("/chat/ask")
 async def chat_ask(request: ChatRequest, raw: Request) -> dict:
     """
@@ -303,6 +378,8 @@ async def chat_ask(request: ChatRequest, raw: Request) -> dict:
     пользователя. Системный промпт всегда один (первое сообщение), история
     только дописывается.
     """
+    
+
     api_key = os.getenv("OPENROUTER_API_KEY")
     if not api_key:
         raise HTTPException(status_code=500, detail="Ключ OpenRouter API не настроен на сервере")
@@ -319,7 +396,7 @@ async def chat_ask(request: ChatRequest, raw: Request) -> dict:
 
     system_prompt = SYSTEM_PROMPT_TEMPLATE.format(
         api_reference=build_api_reference(raw.app, user.get("role") if user else None),
-        user_context=await build_user_context(user),
+        user_context=await build_user_context(user, request.messages),
     )
 
     payload_messages = [{"role": "system", "content": system_prompt}]

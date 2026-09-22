@@ -360,9 +360,12 @@ class TableOrders:
             columns.append(sql.SQL("{} = %s").format(sql.Identifier(column)))
             params.append(value)
 
-        query = sql.SQL("SELECT * FROM orders WHERE {}").format(
-            sql.SQL(" AND ").join(columns)
-        )
+        if columns:
+            query = sql.SQL("SELECT * FROM orders WHERE {}").format(
+                sql.SQL(" AND ").join(columns)
+            )
+        else:
+            query = sql.SQL("SELECT * FROM orders ORDER BY id DESC LIMIT 20")
 
         # Выполнение
         try:
