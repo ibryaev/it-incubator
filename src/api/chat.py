@@ -216,7 +216,7 @@ async def build_user_context(user: Optional[dict]) -> str:
 
     created: list[str] = []
     for oid in user.get("orders_created") or []:
-        order = await methods.read(oid)
+        order = await methods.orders.read(oid)
         if "error" not in order:
             created.append(
                 f"  - #{order['id']} «{order['title']}» — статус: {order['status']}, "
@@ -226,7 +226,7 @@ async def build_user_context(user: Optional[dict]) -> str:
 
     pinned: list[str] = []
     for oid in user.get("orders_pinned") or []:
-        order = await methods.read(oid)
+        order = await methods.orders.read(oid)
         if "error" not in order:
             pinned.append(
                 f"  - #{order['id']} «{order['title']}» — статус: {order['status']}, "
@@ -279,7 +279,7 @@ async def chat_ask(request: ChatRequest, raw: Request) -> dict:
     # Валидируем credentials тем же способом, что и вся остальная API
     user: Optional[dict] = None
     if request.credentials:
-        found = await methods.login(
+        found = await methods.users.login(
             request.credentials.email,
             request.credentials.password,
         )
